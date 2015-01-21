@@ -161,13 +161,13 @@ var GLClient = angular.module('GLClient', [
       when('/admin', {
         templateUrl: 'views/admin.html',
         controller: 'LoginCtrl',
-        header_title: 'Admin Login',
+        header_title: 'Login',
         header_subtitle: ''
       }).
       when('/login', {
         templateUrl: 'views/login.html',
         controller: 'LoginCtrl',
-        header_title: 'Receiver Login',
+        header_title: 'Login',
         header_subtitle: ''
       }).
       when('/start', {
@@ -183,7 +183,7 @@ var GLClient = angular.module('GLClient', [
         header_subtitle: ''
       }).
       otherwise({
-        redirectTo: '/submission'
+        redirectTo: '/'
       });
 
       $translateProvider.useStaticFilesLoader({
