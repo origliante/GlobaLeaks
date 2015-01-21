@@ -53,7 +53,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
       }
 
       var modalInstance = $modal.open({
-        templateUrl: 'views/intro.html',
+        templateUrl: 'views/partials/intro.html',
         controller: 'IntroCtrl',
         size: 'lg',
         scope: $scope
@@ -65,8 +65,12 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
       if ($scope.node) {
         if ($scope.node.wizard_done === false) {
           $location.path('/wizard');
-        } else if($location.path() == '/' && $scope.node.landing != '/') {
-          $location.path($scope.node.landing);
+        }
+
+        if ($location.path() == '/submission' &&
+            $scope.anonymous === false &&
+            $scope.node.tor2web_submission === false) {
+          $location.path("/");
         }
 
         /* Feature implemented for amnesty and currently disabled */
@@ -91,6 +95,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
         if ($rootScope.language == undefined || $.inArray($rootScope.language, node.languages_enabled) == -1) {
           $rootScope.language = node.default_language;
           $rootScope.default_language = node.default_language;
+          $translate.use($rootScope.language);
         }
 
         $scope.languages_supported = {};
@@ -109,8 +114,6 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
 
         $scope.show_language_selector = ($scope.languages_enabled_length > 1);
       });
-
-      $translate.use($rootScope.language);
 
     };
 
