@@ -14,10 +14,9 @@ import time
 
 from twisted.internet import threads
 from twisted.internet.defer import inlineCallbacks
-from cyclone.web import StaticFileHandler
 
 from globaleaks.settings import GLSetting
-from globaleaks.handlers.admstaticfiles import dump_static_file
+from globaleaks.handlers.admin.staticfiles import dump_static_file
 from globaleaks.handlers.base import BaseStaticFileHandler
 from globaleaks.handlers.authentication import transport_security_check, authenticated, unauthenticated
 from globaleaks.utils.utility import log
@@ -73,16 +72,12 @@ class LanguageFileHandler(BaseStaticFileHandler):
         path = self.custom_langfile_path(lang)
         directory_traversal_check(GLSetting.static_path_l10n, path)
 
-        if os.path.exists(path):
-            StaticFileHandler.get(self, path, True)
-        else:
+        if not os.path.exists(path):
             path = self.langfile_path(lang)
             directory_traversal_check(GLSetting.glclient_path, path)
-
-            # to reuse use the StaticFile handler we need to change the root path
             self.root = os.path.abspath(os.path.join(GLSetting.glclient_path, 'l10n'))
 
-            StaticFileHandler.get(self, path, True)
+        BaseStaticFileHandler.get(self, path)
 
     @transport_security_check('admin')
     @authenticated('admin')
