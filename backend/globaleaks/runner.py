@@ -105,7 +105,7 @@ def globaleaks_start():
 
     return True
 
-class GLBaseRunnerUnix(UnixApplicationRunner):
+class GLBaseRunner(UnixApplicationRunner):
     """
     This runner is specific to Unix systems.
     """
@@ -138,5 +138,3 @@ class GLBaseRunnerUnix(UnixApplicationRunner):
             quit(-1)
 
         self.removePID(self.config['pidfile'])
-
-GLBaseRunner = GLBaseRunnerUnix
