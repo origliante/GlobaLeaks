@@ -9,8 +9,24 @@
 # https://github.com/globaleaks/GlobaLeaks/wiki/Customization-guide#customize-notification
 
 from globaleaks.settings import GLSetting
-from globaleaks.utils.utility import (ISO8601_to_pretty_str_tz,
-                                      dump_file_list, dump_submission_steps)
+from globaleaks.utils.utility import ISO8601_to_pretty_str_tz, ISO8601_to_day_str
+
+def dump_submission_steps(wb_steps):
+    dumptext = u"FIELD_MAIL_DUMP_STILL_NEED_TO_BE_IMPLEMENTED"
+
+    return dumptext
+
+def dump_file_list(filelist, files_n):
+    info = "%s%s%s\n" % ("Filename",
+                             " "*(40-len("Filename")),
+                             "Size (Bytes)")
+
+    for i in xrange(files_n):
+        info += "%s%s%i\n" % (filelist[i]['name'],
+                                " "*(40 - len(filelist[i]['name'])),
+                                filelist[i]['size'])
+
+    return info
 
 class Templating(object):
 
@@ -22,8 +38,6 @@ class Templating(object):
         supported_event_types = { u'encrypted_tip' : EncryptedTipKeyword,
                                   u'plaintext_tip' : TipKeyword,
                                   # different events, some classes
-                                  u'encrypted_expiring_tip' : EncryptedTipKeyword,
-                                  u'plaintext_expiring_tip' : TipKeyword,
                                   u'encrypted_file' : EncryptedFileKeyword,
                                   u'plaintext_file' : FileKeyword,
                                   u'encrypted_comment' : EncryptedCommentKeyword,
@@ -32,6 +46,8 @@ class Templating(object):
                                   u'plaintext_message' : MessageKeyword,
                                   u'zip_collection' : ZipFileKeyword,
                                   u'ping_mail' : PingMailKeyword,
+                                  u'admin_pgp_expiration_alert': AdminPGPAlertKeyword,
+                                  u'pgp_expiration_alert': PGPAlertKeyword
                                 }
 
         if event_dicts.type not in supported_event_types.keys():
@@ -247,7 +263,6 @@ class MessageKeyword(TipKeyword):
         self.message = message_desc
 
     def MessageSource(self):
-        # well... it's obviously always WhistleBlower at the moment...
         return self.message['author']
 
     def EventTime(self):
@@ -348,9 +363,9 @@ class ZipFileKeyword(TipKeyword):
         return str(self.zip['total_size'])
 
 
-class PingMailKeyword(object):
+class PingMailKeyword(_KeyWord):
 
-    keyword_list = [
+    ping_mail_keywords = [
         '%ReceiverName%',
         '%EventCount%'
     ]
@@ -360,6 +375,11 @@ class PingMailKeyword(object):
         This is a reduced version because PingMail are
         thinked to have least information as possible
         """
+        super(PingMailKeyword, self).__init__(node_desc, context_desc,
+                                            fields_desc, receiver_desc)
+
+        self.keyword_list += PingMailKeyword.ping_mail_keywords
+
         self.name = receiver_desc['name']
         self.counter = ping_desc['counter']
 
@@ -368,3 +388,43 @@ class PingMailKeyword(object):
 
     def EventCount(self):
         return str(self.counter)
+
+
+class AdminPGPAlertKeyword(_KeyWord):
+
+    admin_pgp_alert_keywords = [
+        "%PGPKeyInfoList%"
+    ]
+
+    def __init__(self, node_desc, context_desc, fields_desc, receiver_desc, tip_desc, alert_desc):
+        super(AdminPGPAlertKeyword, self).__init__(node_desc, context_desc,
+                                                   fields_desc, receiver_desc)
+
+        self.keyword_list += AdminPGPAlertKeyword.admin_pgp_alert_keywords
+
+        self.alert = alert_desc
+
+    def PGPKeyInfoList(self):
+        ret = ""
+        for r in self.alert['expired_or_expiring']:
+            ret += "\t%s, %s (%s)\n" % (r['name'],
+                                    r['gpg_key_fingerprint'],
+                                    ISO8601_to_day_str(r['gpg_key_expiration']))
+        return ret
+
+
+class PGPAlertKeyword(_KeyWord):
+
+    pgp_alert_keywords = [
+        "%PGPKeyInfo%"
+    ]
+
+    def __init__(self, node_desc, context_desc, fields_desc, receiver_desc, tip_desc, *x):
+        super(PGPAlertKeyword, self).__init__(node_desc, context_desc,
+                                              fields_desc, receiver_desc)
+
+        self.keyword_list += PGPAlertKeyword.pgp_alert_keywords
+
+    def PGPKeyInfo(self):
+        return "\t0x%s (%s)" % (self.receiver['gpg_key_fingerprint'][:7],
+                                ISO8601_to_day_str(self.receiver['gpg_key_expiration']))

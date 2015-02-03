@@ -8,6 +8,7 @@ from globaleaks.jobs.statistics_sched import AnomaliesSchedule, StatisticsSchedu
 from globaleaks.models import Stats
 from globaleaks.settings import transact_ro
 from globaleaks.tests import helpers
+from globaleaks.tests.test_anomaly import pollute_events_for_testing
 from globaleaks.utils.utility import datetime_now
 
 anomaly.reactor = task.Clock()
@@ -18,7 +19,7 @@ class TestAnomaliesCollection(helpers.TestHandler):
 
     @inlineCallbacks
     def test_get(self):
-        anomaly.pollute_Event_for_testing(3)
+        pollute_events_for_testing(3)
         yield AnomaliesSchedule().operation()
 
         handler = self.request({}, role='admin')
@@ -41,22 +42,23 @@ class TestStatsCollection(helpers.TestHandler):
         yield handler.get(0)
 
         self.assertTrue(isinstance(self.responses, list))
-        self.assertEqual(len(self.responses), 1)
-        self.assertEqual(len(self.responses[0]), 7 * 24)
+        self.assertEqual(len(self.responses[0]), 3)
+        self.assertEqual(len(self.responses[0]['heatmap']), 7 * 24)
 
-        anomaly.pollute_Event_for_testing(3)
+        pollute_events_for_testing(3)
 
         yield AnomaliesSchedule().operation()
+        yield StatisticsSchedule().operation()
 
-        handler = self.request({}, role='admin')
-        yield handler.get(0)
-
-        self.assertEqual(len(self.responses), 2)
-        self.assertEqual(len(self.responses[1]), 7 * 24)
+        for i in range(0, 2):
+            handler = self.request({}, role='admin')
+            yield handler.get(i)
+            self.assertEqual(len(self.responses[1 + i]), 3)
+            self.assertEqual(len(self.responses[1 + i]['heatmap']), 7 * 24)
 
     @inlineCallbacks
     def test_delete(self):
-        anomaly.pollute_Event_for_testing(3)
+        pollute_events_for_testing(3)
         yield AnomaliesSchedule().operation()
         yield StatisticsSchedule().operation()
 
@@ -78,7 +80,7 @@ class TestAnomHistCollection(helpers.TestHandler):
 
     @inlineCallbacks
     def test_get(self):
-        anomaly.pollute_Event_for_testing(3)
+        pollute_events_for_testing(3)
         yield AnomaliesSchedule().operation()
         yield StatisticsSchedule().operation()
 
@@ -90,7 +92,7 @@ class TestAnomHistCollection(helpers.TestHandler):
 
     @inlineCallbacks
     def test_delete(self):
-        anomaly.pollute_Event_for_testing(3)
+        pollute_events_for_testing(3)
         yield AnomaliesSchedule().operation()
         yield StatisticsSchedule().operation()
 
@@ -113,3 +115,31 @@ class TestAnomHistCollection(helpers.TestHandler):
         yield handler.get()
         self.assertEqual(len(self.responses), 0)
         self.assertTrue(isinstance(self.responses, list))
+
+
+class TestRecentEventsCollection(helpers.TestHandler):
+    _handler = statistics.RecentEventsCollection
+
+    @inlineCallbacks
+    def test_get(self):
+        pollute_events_for_testing(3)
+        yield StatisticsSchedule().operation()
+
+        handler = self.request({}, role='admin')
+
+        yield handler.get('details')
+        yield handler.get('summary')
+
+        self.assertTrue(isinstance(self.responses[0], list))
+        self.assertTrue(isinstance(self.responses[1], dict))
+
+        for k in ['id', 'duration', 'event', 'creation_date']:
+            for elem in self.responses[0]:
+                self.assertTrue(k in elem)
+
+        for k in ['wb_messages', 'wb_comments',
+                  'receiver_messages', 'receiver_comments',
+                  'started_submissions', 'completed_submissions',
+                  'successful_logins', 'failed_logins',
+                  'uploaded_files', 'appended_files']:
+            self.assertTrue(k in self.responses[1])

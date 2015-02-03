@@ -15,6 +15,15 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.trial import unittest
 from twisted.test import proto_helpers
 
+from gnupg import GPG
+
+# Monkeypathing for unit testing  in order to
+# prevent mail activities
+from globaleaks.utils import mailutils
+def sendmail_mock(**args):
+    return defer.succeed(None)
+mailutils.sendmail = sendmail_mock
+
 from globaleaks import db, models, security, anomaly
 from globaleaks.db.datainit import load_appdata, import_memory_variables
 from globaleaks.handlers import files, rtip, wbtip, authentication
@@ -27,10 +36,10 @@ from globaleaks.jobs import delivery_sched, notification_sched, statistics_sched
 from globaleaks.models import db_forge_obj, ReceiverTip, ReceiverFile, WhistleblowerTip, InternalTip
 from globaleaks.plugins import notification
 from globaleaks.settings import GLSetting, transact, transact_ro
+from globaleaks.security import GLSecureTemporaryFile
+from globaleaks.third_party import rstr
 from globaleaks.utils import mailutils
 from globaleaks.utils.utility import datetime_null, uuid4, log
-from globaleaks.third_party import rstr
-from globaleaks.security import GLSecureTemporaryFile
 
 from . import TEST_DIR
 
@@ -45,14 +54,18 @@ INVALID_PASSWORD = u'antani'
 
 FIXTURES_PATH = os.path.join(TEST_DIR, 'fixtures')
 
+with open(os.path.join(TEST_DIR, 'keys/valid_pgp_key1.txt')) as pgp_file:
+    VALID_PGP_KEY1 = pgp_file.read()
 
-with open(os.path.join(TEST_DIR, 'valid_pgp_key.txt')) as pgp_file:
-    VALID_PGP_KEY = pgp_file.read()
+with open(os.path.join(TEST_DIR, 'keys/valid_pgp_key2.txt')) as pgp_file:
+    VALID_PGP_KEY2 = pgp_file.read()
+
+with open(os.path.join(TEST_DIR, 'keys/expired_pgp_key.txt')) as pgp_file:
+    EXPIRED_PGP_KEY = pgp_file.read()
 
 transact.tp = FakeThreadPool()
 authentication.reactor = task.Clock()
 anomaly.reactor = task.Clock()
-anomaly.notification = False
 
 class UTlog:
 
@@ -67,7 +80,6 @@ class UTlog:
 log.err = UTlog.err
 log.debug = UTlog.debug
 
-
 def export_fixture(*models):
     """
     Return a valid json object holding all informations handled by the fields.
@@ -80,6 +92,7 @@ def export_fixture(*models):
         'fields': model.dict(),
         'class': model.__class__.__name__,
     } for model in models], default=str, indent=2)
+
 
 @transact
 def import_fixture(store, fixture):
@@ -123,11 +136,6 @@ class TestGL(unittest.TestCase):
 
         self.setUp_dummy()
 
-        def sendmail_mock(*args):
-            return defer.succeed(None)
-
-        mailutils.sendmail = sendmail_mock
-
         yield db.create_tables(self.create_node)
 
         for fixture in getattr(self, 'fixtures', []):
@@ -153,10 +161,10 @@ class TestGL(unittest.TestCase):
 
         if self.encryption_scenario == 'MIXED':
             self.dummyReceiver_1['gpg_key_armor'] = None
-            self.dummyReceiver_2['gpg_key_armor'] = VALID_PGP_KEY
+            self.dummyReceiver_2['gpg_key_armor'] = VALID_PGP_KEY1
         elif self.encryption_scenario == 'ALL_ENCRYPTED':
-            self.dummyReceiver_1['gpg_key_armor'] = VALID_PGP_KEY
-            self.dummyReceiver_2['gpg_key_armor'] = VALID_PGP_KEY
+            self.dummyReceiver_1['gpg_key_armor'] = VALID_PGP_KEY1
+            self.dummyReceiver_2['gpg_key_armor'] = VALID_PGP_KEY2
         elif self.encryption_scenario == 'ALL_PLAINTEXT':
             self.dummyReceiver_1['gpg_key_armor'] = None
             self.dummyReceiver_2['gpg_key_armor'] = None
@@ -207,6 +215,7 @@ class TestGL(unittest.TestCase):
             'y': 1,
             'x': 1,
         }
+
         return dummy_f
 
     @defer.inlineCallbacks
@@ -596,7 +605,7 @@ class MockDict():
             'mail_address': self.dummyReceiverUser['username'],
             'ping_mail_address': '',
             'can_delete_submission': True,
-            'postpone_superpower': False,
+            'postpone_superpower': True,
             'contexts' : [],
             'tip_notification': True,
             'file_notification': True,
@@ -605,15 +614,18 @@ class MockDict():
             'ping_notification': False,
             'gpg_key_info': u'',
             'gpg_key_fingerprint' : u'',
-            'gpg_key_status': models.Receiver._gpg_types[0], # disabled
-            'gpg_key_armor' : u'',
-            'gpg_enable_notification': False,
+            'gpg_key_status': u'disabled',
+            'gpg_key_armor': u'',
+            'gpg_key_expiration': u'',
             'gpg_key_remove': False,
             'presentation_order': 0,
             'timezone': 0,
             'language': u'en',
             'configuration': 'default'
         }
+
+        self.dummyReceiverGPG = copy.deepcopy(self.dummyReceiver)
+        self.dummyReceiverGPG['gpg_key_armor'] = VALID_PGP_KEY1
 
         self.dummyFieldTemplates = [
         {
@@ -705,6 +717,34 @@ class MockDict():
                 'options': [],
                 'y': 0,
                 'x': 0
+        },
+        {
+            'id': u'7e1f0cf8-63a7-4ed8-bc5d-7cf0e5a2aec2',
+            'is_template': True,
+            'step_id': '',
+            'fieldgroup_id': '',
+            'label': u'Gender',
+            'type': u'selectbox',
+            'preview': False,
+            'description': u"field description",
+                'hint': u'field hint',
+                'multi_entry': False,
+                'stats_enabled': False,
+                'required': False,
+                'children': {},
+                'options': [
+                  {
+                    "id": "2ebf6df8-289a-4f17-aa59-329fe11d232e",
+                    "value": "", "attrs": {"name": "Male"}
+                  },
+                  {
+                    "id": "9c7f343b-ed46-4c9e-9121-a54b6e310123",
+                    "value": "",
+                    "attrs": {"name": "Female"}
+                  }
+                ],
+                'y': 0,
+                'x': 0
         }]
 
         self.dummyFields = copy.deepcopy(self.dummyFieldTemplates)
@@ -759,7 +799,6 @@ class MockDict():
             'description': u"Pleæs€, set m€: d€scription",
             'presentation': u'This is whæt æpp€ærs on top',
             'footer': u'check it out https://www.youtube.com/franksentus ;)',
-            'subtitle': u'https://twitter.com/TheHackersNews/status/410457372042092544/photo/1',
             'security_awareness_title': u'',
             'security_awareness_text': u'',
             'whistleblowing_question': u'',
@@ -801,6 +840,9 @@ class MockDict():
             'custom_privacy_badge_tbb': u'',
             'custom_privacy_badge_tor': u'',
             'custom_privacy_badge_none': u'',
+            'header_title_homepage': u'',
+            'header_title_submissionpage': u'',
+            'landing_page': u'homepage'
         }
 
 

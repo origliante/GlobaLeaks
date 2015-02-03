@@ -5,20 +5,15 @@
 # Implementation of the code executed when an HTTP client reach /admin/* URI
 #
 import copy
-import os
 import shutil
 
-from storm.exceptions import DatabaseError
-from twisted.internet.defer import inlineCallbacks
-
 from globaleaks import security, LANGUAGES_SUPPORTED_CODES, LANGUAGES_SUPPORTED
-from globaleaks.db.datainit import db_import_memory_variables
-from globaleaks.handlers.authentication import authenticated, transport_security_check
-from globaleaks.handlers.base import BaseHandler, GLApiCache
+from globaleaks.handlers.base import GLApiCache
 from globaleaks.handlers.admin.field import disassociate_field, get_field_association
 from globaleaks.handlers.admin.staticfiles import *
 from globaleaks.handlers.admin.overview import *
 from globaleaks.handlers.admin.statistics import *
+from globaleaks.handlers.admin.notification import *
 from globaleaks.handlers.node import get_public_context_list, get_public_receiver_list, \
     anon_serialize_node, anon_serialize_step
 from globaleaks import models
@@ -86,6 +81,7 @@ def db_admin_serialize_node(store, language):
         'custom_privacy_badge_tbb': node.custom_privacy_badge_tbb,
         'custom_privacy_badge_tor': node.custom_privacy_badge_tor,
         'custom_privacy_badge_none': node.custom_privacy_badge_none,
+        'landing_page': node.landing_page
     }
 
     return get_localized_values(ret_dict, node, node.localized_strings, language)
@@ -94,6 +90,37 @@ def db_admin_serialize_node(store, language):
 @transact_ro
 def admin_serialize_node(*args):
     return db_admin_serialize_node(*args)
+
+
+def db_admin_serialize_user(store, username):
+    """
+    Serialize user description
+
+    :param store: the store on which perform queries.
+    :param username: the username of the user to be serialized
+    :param language: the language in which to localize data
+    :return: a serialization of the object
+    """
+    user = store.find(models.User, models.User.username == unicode(username)).one()
+
+    ret_dict = {
+        'username': user.username,
+        'password': user.password,
+        'salt': user.salt,
+        'role': user.role,
+        'state': user.state,
+        'last_login': datetime_to_ISO8601(user.last_login),
+        'language': user.language,
+        'timezone': user.timezone,
+        'password_change_needed': user.password_change_needed,
+        'password_change_date': user.password_change_date
+    }
+
+    return ret_dict
+
+@transact_ro
+def admin_serialize_user(*args):
+    return db_admin_serialize_user(*args)
 
 
 def db_create_step(store, context_id, steps, language):
@@ -258,8 +285,8 @@ def admin_serialize_receiver(receiver, language):
         "gpg_key_armor": receiver.gpg_key_armor,
         "gpg_key_remove": False,
         "gpg_key_fingerprint": receiver.gpg_key_fingerprint,
+        "gpg_key_expiration": datetime_to_ISO8601(receiver.gpg_key_expiration),
         "gpg_key_status": receiver.gpg_key_status,
-        "gpg_enable_notification": receiver.gpg_enable_notification,
         "comment_notification": receiver.comment_notification,
         "tip_notification": receiver.tip_notification,
         "file_notification": receiver.file_notification,
