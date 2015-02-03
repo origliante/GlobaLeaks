@@ -124,11 +124,7 @@ def init_db(store, result, node_dict, appdata_dict):
     # 'variables' used in the template.
 
     for k in appdata_dict['templates']:
-
-        # Todo handle pgp_expiration_alert and pgp_expiration_notice already included in client/app/data/txt
-        # and internationalized with right support on backend db.
-        if k in appdata_dict['templates']:
-            setattr(notification, k, appdata_dict['templates'][k])
+        setattr(notification, k, appdata_dict['templates'][k])
 
     store.add(notification)
 
@@ -166,6 +162,9 @@ def db_import_memory_variables(store):
         GLSetting.memory_copy.notif_security = notif.security
         GLSetting.memory_copy.notif_source_name = notif.source_name
         GLSetting.memory_copy.notif_source_email = notif.source_email
+        GLSetting.memory_copy.receiver_notif_enable = not notif.disable_receivers_notification_emails
+        GLSetting.memory_copy.admin_notif_enable = not notif.disable_admin_notification_emails
+
 
     except Exception as e:
         raise errors.InvalidInputFormat("Cannot import memory variables: %s" % e)

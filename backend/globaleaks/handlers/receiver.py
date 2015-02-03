@@ -30,8 +30,8 @@ def receiver_serialize_receiver(receiver, language):
         "gpg_key_fingerprint": receiver.gpg_key_fingerprint,
         "gpg_key_remove": False,
         "gpg_key_armor": receiver.gpg_key_armor,
+        "gpg_key_expiration": datetime_to_ISO8601(receiver.gpg_key_expiration),
         "gpg_key_status": receiver.gpg_key_status,
-        "gpg_enable_notification": receiver.gpg_enable_notification,
         "tip_notification" : receiver.tip_notification,
         "file_notification" : receiver.file_notification,
         "comment_notification" : receiver.comment_notification,
@@ -300,10 +300,11 @@ def delete_receiver_notif(store, receiver_id):
         te.count(),
         receiver_id
     ))
+    te.remove()
 
 class NotificationCollection(BaseHandler):
     """
-    This interface retern a list of the notification for the receiver,
+    This interface return a list of the notification for the receiver,
     is used in the landing page, and want be a list of the recent
     activities for the journalist/rcvr.
     """

@@ -185,18 +185,24 @@ def fsops_gpg_encrypt(fpath, recipient_gpg):
     required keys are checked on top
 
     """
-    gpoj = GLBGPG(recipient_gpg)
+    gpoj = GLBGPG()
 
-    if not gpoj.validate_key(recipient_gpg['gpg_key_armor']):
-        raise Exception("Unable to validate key")
+    try:
+        gpoj.load_key(recipient_gpg['gpg_key_armor'])
 
-    filepath = os.path.join(GLSetting.submission_path, fpath)
+        filepath = os.path.join(GLSetting.submission_path, fpath)
 
-    with GLSecureFile(filepath) as f:
-        encrypted_file_path, encrypted_file_size = \
-            gpoj.encrypt_file(filepath, f, GLSetting.submission_path)
+        with GLSecureFile(filepath) as f:
+            encrypted_file_path, encrypted_file_size = \
+                gpoj.encrypt_file(recipient_gpg['gpg_key_fingerprint'], filepath, f, GLSetting.submission_path)
 
-    gpoj.destroy_environment()
+    except:
+        raise
+
+    finally:
+        # the finally statement is always called also if
+        # except contains a return or a raise
+        gpoj.destroy_environment()
 
     return encrypted_file_path, encrypted_file_size
 
@@ -326,7 +332,7 @@ def encrypt_where_available(receivermap):
 
     for rcounter, rfileinfo in enumerate(receivermap):
 
-        if rfileinfo['receiver']['gpg_key_status'] == u'Enabled':
+        if rfileinfo['receiver']['gpg_key_status'] == u'enabled':
 
             try:
                 new_path, new_size = fsops_gpg_encrypt(rfileinfo['path'], rfileinfo['receiver'])

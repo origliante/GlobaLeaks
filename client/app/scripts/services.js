@@ -333,7 +333,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
           Receivers.query(function(receivers){
             self.receivers = [];
             forEach(receivers, function(receiver){
-              if (receiver.gpg_key_status !== 'Enabled') {
+              if (receiver.gpg_key_status !== 'enabled') {
                 receiver.missing_pgp = true;
               }
               self.receivers.push(receiver);
@@ -735,6 +735,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         receiver.gpg_key_fingerprint = '';
         receiver.gpg_key_remove = false;
         receiver.gpg_key_armor = '';
+        receiver.gpg_key_expiration = '';
         receiver.gpg_key_status = 'ignored';
         receiver.gpg_enable_notification = false;
         receiver.presentation_order = 0;
@@ -766,7 +767,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
     return $resource('/admin/overview/files');
 }]).
   factory('StatsCollection', ['$resource', function($resource) {
-    return $resource('/admin/stats/0');
+    return $resource('/admin/stats/:week_delta', {week_delta: '@week_delta'}, {});
 }]).
   factory('AnomaliesCollection', ['$resource', function($resource) {
     return $resource('/admin/anomalies');
