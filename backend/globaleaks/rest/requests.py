@@ -16,6 +16,7 @@ hidden_service_regexp             = r'^http://[0-9a-z]{16}\.onion$'
 hidden_service_regexp_or_empty    = r'^http://[0-9a-z]{16}\.onion$$|^$'
 https_url_regexp                  = r'^https://([0-9a-z\-]+)\.(.*)$'
 https_url_regexp_or_empty         = r'^https://([0-9a-z\-]+)\.(.*)$|^$'
+landing_page_regexp               = r'^homepage$|^submissionpage$'
 
 dateType = r'(.*)'
 
@@ -66,9 +67,12 @@ receiverReceiverDesc = {
     "ping_mail_address": email_regexp,
     # ping_mail_address is a copy of 'mail_address' if unset.
     'description' : unicode,
-    'gpg_key_armor': unicode,
     'gpg_key_remove': bool,
-    "gpg_enable_notification": bool,
+    'gpg_key_fingerprint': unicode,
+    'gpg_key_expiration': unicode,
+    'gpg_key_info': unicode,
+    'gpg_key_armor': unicode,
+    'gpg_key_status': unicode,
     "comment_notification": bool,
     "file_notification": bool,
     "tip_notification": bool,
@@ -98,7 +102,6 @@ adminNodeDesc = {
     'name': unicode,
     'description' : unicode,
     'presentation' : unicode,
-    'subtitle': unicode,
     'footer': unicode,
     'security_awareness_title': unicode,
     'security_awareness_text': unicode,
@@ -136,6 +139,9 @@ adminNodeDesc = {
     'custom_privacy_badge_tbb': unicode,
     'custom_privacy_badge_tor': unicode,
     'custom_privacy_badge_none': unicode,
+    'header_title_homepage': unicode,
+    'header_title_submissionpage': unicode,
+    'landing_page': landing_page_regexp
 }
 
 adminNotificationDesc = {
@@ -163,8 +169,10 @@ adminNotificationDesc = {
     'encrypted_message_mail_title': unicode,
     'plaintext_message_template': unicode,
     'plaintext_message_mail_title': unicode,
-    'pgp_expiration_alert': unicode,
-    'pgp_expiration_notice': unicode,
+    'admin_pgp_alert_mail_template': unicode,
+    'admin_pgp_alert_mail_title': unicode,
+    'pgp_alert_mail_template': unicode,
+    'pgp_alert_mail_title': unicode,
     'zip_description': unicode,
     'ping_mail_template': unicode,
     'ping_mail_title': unicode,
@@ -192,7 +200,7 @@ adminContextDesc = {
 }
 
 adminContextFieldTemplateCopy = {
-    'field_template_id': uuid_regexp,
+    'template_id': uuid_regexp,
     'context_id': uuid_regexp,
     'step_id': uuid_regexp,
 }
@@ -211,10 +219,10 @@ adminReceiverDesc = {
     'message_notification': bool,
     'gpg_key_remove': bool,
     'gpg_key_fingerprint': unicode,
+    'gpg_key_expiration': unicode,
     'gpg_key_info': unicode,
     'gpg_key_armor': unicode,
     'gpg_key_status': unicode,
-    'gpg_enable_notification': bool,
     'presentation_order': int,
     "language": unicode,
     "timezone": int,
@@ -222,7 +230,6 @@ adminReceiverDesc = {
 
 anonNodeDesc = {
     'name': unicode,
-    'subtitle': unicode,
     'description': unicode,
     'presentation': unicode,
     'footer': unicode,
@@ -254,7 +261,11 @@ anonNodeDesc = {
     'custom_privacy_badge_tbb': unicode,
     'custom_privacy_badge_tor': unicode,
     'custom_privacy_badge_none': unicode,
+}
 
+adminStats = {
+    'week_delta': int,
+    # 'report_link': unicode,
 }
 
 TipOverview = {
@@ -467,7 +478,6 @@ wizardStepDesc = {
 wizardNodeDesc = {
     'presentation': dict,
     'footer': dict,
-    'subtitle': dict,
 }
 
 wizardAppdataDesc = {

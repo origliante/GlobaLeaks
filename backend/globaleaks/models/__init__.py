@@ -247,9 +247,7 @@ class InternalTip(Model):
     download_limit = Int()
 
     mark = Unicode()
-
-    _marker = [u'submission', u'finalize', u'first', u'second']
-    # N.B. *_keys = It's created without initializing dict
+    # markers = [u'submission', u'finalize', u'first']
 
 
 class ReceiverTip(Model):
@@ -266,11 +264,9 @@ class ReceiverTip(Model):
     last_access = DateTime(default_factory=datetime_now)
     access_counter = Int()
     notification_date = DateTime()
-    mark = Unicode()
 
-    _marker = [u'not notified', u'notified', u'unable to notify', u'disabled',
-               u'skipped']
-    # N.B. *_keys = It's created without initializing dict
+    mark = Unicode()
+    # markers = [u'not notified', u'notified', u'unable to notify', u'skipped']
 
 
 class WhistleblowerTip(Model):
@@ -306,8 +302,7 @@ class ReceiverFile(Model):
     last_access = DateTime()
 
     mark = Unicode()
-    _marker = [u'not notified', u'notified', u'unable to notify', u'disabled',
-               u'skipped']
+    # markers = [u'not notified', u'notified', u'unable to notify', u'skipped']
 
     status = Unicode()
     _status_list = [u'reference', u'encrypted', u'unavailable', u'nokey']
@@ -336,7 +331,7 @@ class InternalFile(Model):
     size = Int()
 
     mark = Unicode()
-    _marker = [u'not processed', u'locked', u'ready', u'delivered']
+    # markers = [u'not processed', u'locked', u'ready', u'delivered']
     # 'not processed' = submission time
     # 'ready' = processed in ReceiverTip, available for usage
     # 'delivered' = the file need to stay on DB, but from the
@@ -360,16 +355,15 @@ class Comment(Model):
     system_content = JSON()
 
     type = Unicode()
-    _types = [u'receiver', u'whistleblower', u'system']
-    mark = Unicode()
-    _marker = [
-        u'not notified',
-        u'notified',
-        u'unable to notify',
-        u'disabled',
-        u'skipped']
+    # types = [u'receiver', u'whistleblower', u'system']
 
-    # N.B. *_keys = It's created without initializing dict
+    mark = Unicode()
+    # markers = [
+    #   u'not notified',
+    #   u'notified',
+    #   u'unable to notify',
+    #   u'skipped'
+    # ]
 
 
 class Message(Model):
@@ -383,14 +377,15 @@ class Message(Model):
     visualized = Bool()
 
     type = Unicode()
-    _types = [u'receiver', u'whistleblower']
+    # types = [u'receiver', u'whistleblower']
+
     mark = Unicode()
-    _marker = [
-        u'not notified',
-        u'notified',
-        u'unable to notify',
-        u'disabled',
-        u'skipped']
+    # markers = [
+    #    u'not notified',
+    #    u'notified',
+    #    u'unable to notify',
+    #    u'skipped'
+    # ]
 
 
 class Node(Model):
@@ -419,7 +414,6 @@ class Node(Model):
     description = JSON(validator=longlocal_v)
     presentation = JSON(validator=longlocal_v)
     footer = JSON(validator=longlocal_v)
-    subtitle = JSON(validator=longlocal_v)
     security_awareness_title = JSON(validator=longlocal_v)
     security_awareness_text = JSON(validator=longlocal_v)
 
@@ -456,10 +450,15 @@ class Node(Model):
     custom_privacy_badge_tor = JSON()
     custom_privacy_badge_none = JSON()
 
+    header_title_homepage = JSON(validator=shortlocal_v)
+    header_title_submissionpage = JSON(validator=shortlocal_v)
+    landing_page = Unicode()
+
     exception_email = Unicode()
 
     unicode_keys = ['name', 'public_site', 'email', 'hidden_service',
-                    'exception_email', 'default_language', 'receipt_regexp']
+                    'exception_email', 'default_language', 'receipt_regexp',
+                    'landing_page']
     int_keys = ['stats_update_time', 'maximum_namesize',
                 'maximum_textsize', 'maximum_filesize', 'default_timezone']
     bool_keys = ['tor2web_admin', 'tor2web_receiver', 'tor2web_submission',
@@ -470,11 +469,12 @@ class Node(Model):
 
     # wizard_done is not checked because it's set by the backend
 
-    localized_strings = ['description', 'presentation', 'footer', 'subtitle',
-                         'security_awareness_title',
-                         'security_awareness_text', 'whistleblowing_question',
+    localized_strings = ['description', 'presentation', 'footer',
+                         'security_awareness_title', 'security_awareness_text',
+                         'whistleblowing_question',
                          'whistleblowing_button', 'custom_privacy_badge_tbb',
-                         'custom_privacy_badge_tor', 'custom_privacy_badge_none']
+                         'custom_privacy_badge_tor', 'custom_privacy_badge_none',
+                         'header_title_homepage', 'header_title_submissionpage']
 
 
 class Notification(Model):
@@ -493,7 +493,7 @@ class Notification(Model):
     source_email = Unicode(validator=shorttext_v)
 
     security = Unicode()
-    _security_types = [u'TLS', u'SSL']
+    # security_types = [u'TLS', u'SSL']
 
     admin_anomaly_template = JSON(validator=longlocal_v)
 
@@ -517,8 +517,10 @@ class Notification(Model):
     plaintext_message_template = JSON(validator=longlocal_v)
     plaintext_message_mail_title = JSON(validator=longlocal_v)
 
-    pgp_expiration_alert = JSON(validator=longlocal_v)
-    pgp_expiration_notice = JSON(validator=longlocal_v)
+    admin_pgp_alert_mail_title = JSON(validator=longlocal_v)
+    admin_pgp_alert_mail_template = JSON(validator=longlocal_v)
+    pgp_alert_mail_title = JSON(validator=longlocal_v)
+    pgp_alert_mail_template = JSON(validator=longlocal_v)
 
     zip_description = JSON(validator=longlocal_v)
 
@@ -533,11 +535,15 @@ class Notification(Model):
         'username',
         'password',
         'source_name',
-        'source_email']
+        'source_email',
+        'security'
+    ]
     localized_strings = [
         'admin_anomaly_template',
-        'pgp_expiration_alert',
-        'pgp_expiration_notice',
+        'admin_pgp_alert_mail_title',
+        'admin_pgp_alert_mail_template',
+        'pgp_alert_mail_title',
+        'pgp_alert_mail_template',
         'encrypted_tip_template',
         'encrypted_tip_mail_title',
         'plaintext_tip_template',
@@ -556,11 +562,13 @@ class Notification(Model):
         'plaintext_message_mail_title',
         'zip_description',
         'ping_mail_template',
-        'ping_mail_title']
+        'ping_mail_title'
+    ]
     int_keys = [
         'port',
         'disable_admin_notification_emails',
-        'disable_receivers_notification_emails']
+        'disable_receivers_notification_emails'
+    ]
 
 
 class Receiver(Model):
@@ -577,13 +585,16 @@ class Receiver(Model):
     description = JSON(validator=longlocal_v)
 
     configuration = Unicode()
+    # configurations = [u'default', u'forcefully_selected', u'unselectable']
 
     # of GPG key fields
     gpg_key_info = Unicode()
     gpg_key_fingerprint = Unicode()
-    gpg_key_status = Unicode()
     gpg_key_armor = Unicode()
-    gpg_enable_notification = Bool()
+    gpg_key_expiration = DateTime()
+
+    gpg_key_status = Unicode()
+    # gpg_statuses = [u'disabled', u'enabled']
 
     # Can be changed only by admin (but also differ from username!)
     mail_address = Unicode()
@@ -609,9 +620,6 @@ class Receiver(Model):
     #                         "Receiver.id")
 
     presentation_order = Int()
-
-    _configuration = [u'default', u'forcefully_selected', u'unselectable']
-    _gpg_types = [u'Disabled', u'Enabled']
 
     unicode_keys = ['name', 'mail_address',
                     'ping_mail_address', 'configuration']
@@ -775,7 +783,7 @@ class Step(Model):
 class Stats(Model):
     start = DateTime()
     summary = JSON()
-    freemb = Int()
+    free_disk_space = Int()
 
 
 class Anomalies(Model):

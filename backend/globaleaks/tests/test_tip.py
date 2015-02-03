@@ -85,10 +85,12 @@ class TTip(helpers.TestGL):
         'ping_notification': False,
         'ping_mail_address': u'first@winstonsmith.org',
         'postpone_superpower': False,
-        'gpg_key_status': u'Disabled',
-        'gpg_key_info': None, 'gpg_key_fingerprint': None,
-        'gpg_key_remove': False, 'gpg_key_armor': None,
-        'gpg_enable_notification': False,
+        'gpg_key_status': u'disabled',
+        'gpg_key_info': None,
+        'gpg_key_fingerprint': None,
+        'gpg_key_remove': False,
+        'gpg_key_armor': None,
+        'gpg_key_expiration': u'',
         'presentation_order': 0,
         'timezone': 0,
         'language': u'en',
@@ -110,12 +112,12 @@ class TTip(helpers.TestGL):
         'tip_notification': False,
         'ping_notification': False,
         'ping_mail_address': u'second@winstonsmith.org',
-        'gpg_key_status': u'Disabled',
+        'gpg_key_status': u'disabled',
         'gpg_key_info': None,
         'gpg_key_fingerprint': None,
         'gpg_key_remove': False,
         'gpg_key_armor': None,
-        'gpg_enable_notification': False,
+        'gpg_key_expiration': u'',
         'presentation_order': 0,
         'timezone': 0,
         'language': u'en',
@@ -176,7 +178,7 @@ class TestTipInstance(TTip):
         self.submission_desc = yield submission.create_submission(dummySubmissionDict, True, 'en')
 
         self.assertEqual(self.submission_desc['wb_steps'], dummySubmissionDict['wb_steps'])
-        self.assertEqual(self.submission_desc['mark'], models.InternalTip._marker[1])
+        self.assertEqual(self.submission_desc['mark'], u'finalize')
         # Ok, now the submission has been finalized, the tests can start.
 
     @inlineCallbacks
@@ -211,48 +213,35 @@ class TestTipInstance(TTip):
 
     @inlineCallbacks
     def wb_retrive_tip_data(self):
-        if not self.wb_tip_id:
-            self.wb_auth_with_receipt()
-
         self.wb_data = yield wbtip.get_tip(self.wb_tip_id, 'en')
 
         self.assertEqual(self.wb_data['wb_steps'], self.submission_desc['wb_steps'])
 
     @inlineCallbacks
     def create_receivers_tip(self):
-
         receiver_tips = yield delivery_sched.tip_creation()
-
-        self.rtip1_id = receiver_tips[0]
-        self.rtip2_id = receiver_tips[1]
 
         self.assertEqual(len(receiver_tips), 2)
         self.assertTrue(re.match(requests.uuid_regexp, receiver_tips[0]))
         self.assertTrue(re.match(requests.uuid_regexp, receiver_tips[1]))
 
+        tips_receiver_1 = yield receiver.get_receiver_tip_list(self.receiver1_desc['id'], 'en')
+        tips_receiver_2 = yield receiver.get_receiver_tip_list(self.receiver2_desc['id'], 'en')
+        self.rtip1_id = tips_receiver_1[0]['id']
+        self.rtip2_id = tips_receiver_2[0]['id']
+
     @inlineCallbacks
     def access_receivers_tip(self):
-
         auth1, _, _ = yield authentication.login_receiver(self.receiver1_desc['id'], STATIC_PASSWORD)
         self.assertEqual(auth1, self.receiver1_desc['id'])
 
         auth2, _, _ = yield authentication.login_receiver(self.receiver2_desc['id'], STATIC_PASSWORD)
         self.assertEqual(auth2, self.receiver2_desc['id'])
 
-        # we does not know the association auth# sefl.rtip#_id
-        # so we need a double try catch for each check and we need to store the proper association
-        tmp1 = self.rtip1_id
-        tmp2 = self.rtip2_id
-        try:
-            self.receiver1_data = yield rtip.get_tip(auth1, tmp1, 'en')
-        except:
-            self.rtip1_id = tmp2
-            self.rtip2_id = tmp1
-
-            self.receiver1_data = yield rtip.get_tip(auth1, tmp2, 'en')
-
+        for i in range(1, 2):
+            self.receiver1_data = yield rtip.get_tip(auth1, self.rtip1_id, 'en')
             self.assertEqual(self.receiver1_data['wb_steps'], self.submission_desc['wb_steps'])
-            self.assertEqual(self.receiver1_data['access_counter'], 1)
+            self.assertEqual(self.receiver1_data['access_counter'], i)
 
         for i in range(1, 2):
             self.receiver2_data = yield rtip.get_tip(auth2, self.rtip2_id, 'en')
@@ -405,7 +394,7 @@ class TestTipInstance(TTip):
         cl = yield rtip.get_comment_list_receiver(self.receiver1_desc['id'],
                                                  self.rtip1_id)
 
-        self.assertEqual(cl[3]['type'], models.Comment._types[2]) # System (date extension)
+        self.assertEqual(cl[3]['type'], u'system')
 
         sys_comm = cl[3]
 
@@ -433,14 +422,14 @@ class TestTipInstance(TTip):
                                         self.rtip1_id)
 
         self.assertEqual(len(cl), 5)
-        self.assertEqual(cl[0]['type'], models.Comment._types[0]) # Receiver (Rcvr1)
-        self.assertEqual(cl[1]['type'], models.Comment._types[0]) # Receiver (Rcvr2)
-        self.assertEqual(cl[2]['type'], models.Comment._types[1]) # Wb
+        self.assertEqual(cl[0]['type'], u'receiver')
+        self.assertEqual(cl[1]['type'], u'receiver')
+        self.assertEqual(cl[2]['type'], u'whistleblower')
 
-        self.assertEqual(cl[3]['type'], models.Comment._types[2]) # System (date extension)
+        self.assertEqual(cl[3]['type'], u'system')
         self.assertEqual(cl[3]['system_content']['receiver_name'], self.receiver2_desc['name'])
 
-        self.assertEqual(cl[4]['type'], models.Comment._types[2]) # System
+        self.assertEqual(cl[4]['type'],u'system')
 
 
     @inlineCallbacks
@@ -489,7 +478,7 @@ class TestTipInstance(TTip):
         x = yield wbtip.create_message_wb(self.wb_tip_id,
                                           self.receiver1_desc['id'], msgrequest)
 
-        self.assertEqual(x['author'], u'Whistleblower')
+        self.assertEqual(x['author'], u'whistleblower')
 
         after = yield wbtip.get_receiver_list_wb(self.wb_tip_id, 'en')
 
@@ -585,7 +574,6 @@ class TestTipInstance(TTip):
                 self.assertEqual(recv['unread_messages'], 0)
             else:
                 self.assertEqual(recv['unread_messages'], 1)
-
 
     @inlineCallbacks
     def test_full_receiver_wb_workflow(self):

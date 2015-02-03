@@ -6,17 +6,13 @@
 # Notification implementation, documented along the others asynchronous
 # operations, in Architecture and in jobs/README.md
 
-import sys
-
 from twisted.internet.defer import inlineCallbacks
 
 from globaleaks import models
 from globaleaks.jobs.base import GLJob
 from globaleaks.handlers import admin, rtip
-from globaleaks.handlers.admin.notification import admin_serialize_notification
 from globaleaks.plugins.base import Event
-from globaleaks.rest import errors
-from globaleaks.settings import transact, transact_ro, GLSetting
+from globaleaks.settings import transact, GLSetting
 from globaleaks.utils.utility import log, datetime_to_ISO8601
 from globaleaks.models import EventLogs
 
@@ -74,7 +70,11 @@ class EventLogger(object):
         self.context_desc = {}
         self.steps_info_desc = {}
         self.trigger = None
+
+        # this field, do_mail, has to be used as marker, but in fact at the moment
+        # is not used in mailflush.
         self.do_mail = None
+
 
     def import_receiver(self, receiver):
 
@@ -82,31 +82,19 @@ class EventLogger(object):
 
         if self.trigger == 'Message':
             self.template_type = u'encrypted_message' if \
-                receiver.gpg_key_status == u'Enabled' else u'plaintext_message'
-            if not receiver.message_notification:
-                log.debug("Receiver %s has %s notification disabled" %
-                          (receiver.user.username, self.trigger))
+                receiver.gpg_key_status == u'enabled' else u'plaintext_message'
             return receiver.message_notification
         elif self.trigger == 'Tip':
             self.template_type = u'encrypted_tip' if \
-                receiver.gpg_key_status == u'Enabled' else u'plaintext_tip'
-            if not receiver.tip_notification:
-                log.debug("Receiver %s has %s notification disabled" %
-                          (receiver.user.username, self.trigger))
+                receiver.gpg_key_status == u'enabled' else u'plaintext_tip'
             return receiver.tip_notification
         elif self.trigger == 'Comment':
             self.template_type = u'encrypted_comment' if \
-                receiver.gpg_key_status == u'Enabled' else u'plaintext_comment'
-            if not receiver.comment_notification:
-                log.debug("Receiver %s has %s notification disabled" %
-                          (receiver.user.username, self.trigger))
+                receiver.gpg_key_status == u'enabled' else u'plaintext_comment'
             return receiver.comment_notification
         elif self.trigger == 'File':
             self.template_type = u'encrypted_file' if \
-                receiver.gpg_key_status == u'Enabled' else u'plaintext_file'
-            if not receiver.file_notification:
-                log.debug("Receiver %s has %s notification disabled" %
-                          (receiver.user.username, self.trigger))
+                receiver.gpg_key_status == u'enabled' else u'plaintext_file'
             return receiver.file_notification
         else:
             raise Exception("self.trigger of unexpected kind ? %s" % self.trigger)
@@ -133,11 +121,8 @@ class TipEventLogger(EventLogger):
 
     @transact
     def load_tips(self, store):
-        # XXX call this shit: from_tips_to_events
-
         not_notified_tips = store.find(models.ReceiverTip,
-                                       models.ReceiverTip.mark == models.ReceiverTip._marker[0]
-        )
+                                       models.ReceiverTip.mark == u'not notified')
 
         if not_notified_tips.count():
             log.debug("Receiver Tips found to be notified: %d" % not_notified_tips.count())
@@ -147,7 +132,7 @@ class TipEventLogger(EventLogger):
             self.do_mail = self.import_receiver(receiver_tip.receiver)
 
             tip_desc = serialize_receivertip(receiver_tip)
-            receiver_tip.mark = models.ReceiverTip._marker[1] # notified
+            receiver_tip.mark = u'notified'
 
             # this check is to avoid ask continuously the same context:
             if not self.context_desc.has_key('id') or \
@@ -165,9 +150,6 @@ class TipEventLogger(EventLogger):
                               subevent_info=None)
 
 
-# TODO remind that when do_mail is False:
-# receiver_tip.mark = models.ReceiverTip._marker[3] # 'disabled'
-
 class MessageEventLogger(EventLogger):
 
     def __init__(self):
@@ -178,8 +160,7 @@ class MessageEventLogger(EventLogger):
     def load_messages(self, store):
 
         not_notified_messages = store.find(models.Message,
-                                           models.Message.mark == models.Message._marker[0]
-        )
+                                           models.Message.mark == u'not notified')
 
         if not_notified_messages.count():
             log.debug("Messages found to be notified: %d" % not_notified_messages.count())
@@ -187,7 +168,7 @@ class MessageEventLogger(EventLogger):
         for message in not_notified_messages:
 
             message_desc = rtip.receiver_serialize_message(message)
-            message.mark = models.Message._marker[1] # notified
+            message.mark = u'notified'
 
             # message.type can be 'receiver' or 'wb' at the moment, we care of the 2nd
             if message.type == u"receiver":
@@ -221,7 +202,7 @@ class CommentEventLogger(EventLogger):
     def load_comments(self, store):
 
         not_notified_comments = store.find(models.Comment,
-            models.Comment.mark == models.Comment._marker[0]
+            models.Comment.mark == u'not notified'
         )
 
         if not_notified_comments.count():
@@ -241,7 +222,7 @@ class CommentEventLogger(EventLogger):
                                                                   self.language)
 
             comment_desc = rtip.receiver_serialize_comment(comment)
-            comment.mark = models.Comment._marker[1] # 'notified'
+            comment.mark = u'notified'
 
             # for every comment, iterate on the associated receiver(s)
             log.debug("Comments from %s - Receiver(s) %d" % \
@@ -251,7 +232,7 @@ class CommentEventLogger(EventLogger):
 
                 self.do_mail = self.import_receiver(receiver)
 
-                if comment.type == models.Comment._types[0] and comment.author == receiver.name:
+                if comment.type == u'receiver' and comment.author == receiver.name:
                     log.debug("Receiver is the Author (%s): skipped" % receiver.user.username)
                     continue
 
@@ -275,8 +256,7 @@ class FileEventLogger(EventLogger):
     def load_files(self, store):
 
         not_notified_rfiles = store.find(models.ReceiverFile,
-            models.ReceiverFile.mark == models.ReceiverFile._marker[0]
-        )
+            models.ReceiverFile.mark == u'not notified')
 
         if not_notified_rfiles.count():
             log.debug("new [Files✖Receiver] found to be notified: %d" % not_notified_rfiles.count())
@@ -295,7 +275,7 @@ class FileEventLogger(EventLogger):
 
             file_desc = serialize_internalfile(rfile.internalfile, rfile.id)
             tip_desc = serialize_receivertip(rfile.receiver_tip)
-            rfile.mark = models.ReceiverFile._marker[1] # notified
+            rfile.mark = u'notified'
 
             self.do_mail = self.import_receiver(rfile.receiver)
 
@@ -333,18 +313,6 @@ def save_event_db(store, event_dict):
 
 
 class NotificationSchedule(GLJob):
-    """
-    REMINDER:
-            # by ticket https://github.com/globaleaks/GlobaLeaks/issues/444
-            # send notification of file only if notification of tip is already on send status
-            if rfile.receiver_tip.mark == models.ReceiverTip._marker[0]: # 'not notified'
-                rfile.mark = models.ReceiverFile._marker[4] # 'skipped'
-                log.debug("Skipped notification of %s (for %s) because Tip not yet notified" %
-                          (rfile.internalfile.name, rfile.receiver.name))
-                store.commit()
-                continue
-    """
-
     @inlineCallbacks
     def operation(self):
         # TODO: remove notification_status from Model different of EventLogs
@@ -364,3 +332,9 @@ class NotificationSchedule(GLJob):
         files_events = FileEventLogger()
         yield files_events.load_files()
         yield save_event_db(files_events.events)
+
+        if any([len(files_events.events), len(messages_events.events),
+                len(comments_events.events), len(tips_events.events)]):
+            log.debug("Notification: generated Events: %d tips, %d comments, %d messages, %d files" % (
+                len(tips_events.events), len(comments_events.events),
+                len(messages_events.events), len(files_events.events) ) )
