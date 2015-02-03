@@ -174,8 +174,6 @@ class GLSettingsClass(object):
         self.notification_minutes_delta = 2       # runner.py function expects minutes
         self.delivery_seconds_delta = 20          # runner.py function expects seconds
         self.anomaly_seconds_delta = 30           # runner.py function expects seconds
-        self.stats_minutes_delta = 10             # runner.py function expects minutes
-        self.pgp_check_hours_delta = 24           # runner.py function expects hours
         self.mailflush_minutes_delta = 5          # before change check mailflush logic and delay
 
         self.www_form_urlencoded_maximum_size = 1024
@@ -228,6 +226,8 @@ class GLSettingsClass(object):
         self.memory_copy.exception_email = self.defaults.exception_email
         self.memory_copy.default_language = self.defaults.default_language
         self.memory_copy.default_timezone = self.defaults.default_timezone
+        self.memory_copy.receiver_notif_enable = True
+        self.memory_copy.admin_notif_enable = True
         self.memory_copy.notif_server = None
         self.memory_copy.notif_port = None
         self.memory_copy.notif_username = None

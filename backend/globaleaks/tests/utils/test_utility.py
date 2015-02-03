@@ -89,6 +89,15 @@ class TestUtility(unittest.TestCase):
         self.assertEqual(c, d)
         self.assertEqual(d, e)
 
+    def test_utc_past_date(self):
+        a = utility.datetime_now()
+        b = utility.utc_past_date(seconds=99)
+        c = utility.utc_past_date(minutes=99)
+        d = utility.utc_past_date(hours=99)
+        self.assertTrue(a>b)
+        self.assertTrue(b>c)
+        self.assertTrue(c>d)
+
     def test_utc_future_date(self):
         a = utility.datetime_now()
         b = utility.utc_future_date(seconds=99)
@@ -129,6 +138,12 @@ class TestUtility(unittest.TestCase):
         self.assertEqual(utility.ISO8601_to_pretty_str(None), 'Thursday 01 January 1970 00:00 (UTC)')
         self.assertEqual(utility.ISO8601_to_pretty_str('1970-01-01T00:00:00Z'), 'Thursday 01 January 1970 00:00 (UTC)')
 
+    def test_ISO8601_to_pretty_str_tz(self):
+        self.assertEqual(utility.ISO8601_to_pretty_str_tz(None, 1), 'Thursday 01 January 1970 01:00')
+        self.assertEqual(utility.ISO8601_to_pretty_str_tz(None, 2), 'Thursday 01 January 1970 02:00')
+        self.assertEqual(utility.ISO8601_to_pretty_str_tz('1970-01-01T00:00:00Z', 1), 'Thursday 01 January 1970 01:00')
+        self.assertEqual(utility.ISO8601_to_pretty_str_tz('1970-01-01T00:00:00Z', 2), 'Thursday 01 January 1970 02:00')
+
     def test_acquire_bool(self):
         self.assertTrue(utility.acquire_bool('true'))
         self.assertTrue(utility.acquire_bool(u'true'))
@@ -136,6 +151,14 @@ class TestUtility(unittest.TestCase):
         self.assertFalse(utility.acquire_bool('false'))
         self.assertFalse(utility.acquire_bool(None))
         self.assertFalse(utility.acquire_bool('antani'))
+
+    def test_bytes_to_pretty_str(self):
+        self.assertEqual(utility.bytes_to_pretty_str("60000000001"), "60GB")
+        self.assertEqual(utility.bytes_to_pretty_str("5000000001"), "5GB")
+        self.assertEqual(utility.bytes_to_pretty_str("40000001"), "40MB")
+        self.assertEqual(utility.bytes_to_pretty_str("3000001"), "3MB")
+        self.assertEqual(utility.bytes_to_pretty_str("20001"), "20KB")
+        self.assertEqual(utility.bytes_to_pretty_str("1001"), "1KB")
 
     def test_log(self):
         utility.log.info("info")

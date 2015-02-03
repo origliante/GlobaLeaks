@@ -14,9 +14,6 @@ def perform_version_update(starting_ver, ending_ver, start_path):
     assert os.path.isfile(start_path)
     assert starting_ver < ending_ver
 
-    from globaleaks.db.update_5_6 import Replacer56
-    from globaleaks.db.update_6_7 import Replacer67
-    from globaleaks.db.update_7_8 import Replacer78
     from globaleaks.db.update_8_9 import Replacer89
     from globaleaks.db.update_9_10 import Replacer910
     from globaleaks.db.update_10_11 import Replacer1011
@@ -25,11 +22,9 @@ def perform_version_update(starting_ver, ending_ver, start_path):
     from globaleaks.db.update_13_14 import Replacer1314
     from globaleaks.db.update_14_15 import Replacer1415
     from globaleaks.db.update_15_16 import Replacer1516
+    from globaleaks.db.update_16_17 import Replacer1617
 
     releases_supported = {
-        "56" : Replacer56,
-        "67" : Replacer67,
-        "78" : Replacer78,
         "89" : Replacer89,
         "910" : Replacer910,
         "1011" : Replacer1011, 
@@ -38,13 +33,14 @@ def perform_version_update(starting_ver, ending_ver, start_path):
         "1314": Replacer1314,
         "1415": Replacer1415,
         "1516": Replacer1516,
+        "1617": Replacer1617,
     }
     
     to_delete_on_fail = []
     to_delete_on_success = []
 
-    if starting_ver < 5:
-        print "Migration from DB version lower than 5 its no more supported!"
+    if starting_ver < 8:
+        print "Migration from DB version lower than 8 its no more supported!"
         print "asks for supports if you can't create your Node from scratch"
         quit()
 
