@@ -6,6 +6,8 @@ GLClient.controller('SubmissionCtrl',
 
   var context_id = $location.search().context;
   var receivers_ids = $location.search().receivers;
+  var contexts_selectable = $location.search().contexts_selectable;
+  var receivers_selectable = $location.search().receivers_selectable;
 
   if (receivers_ids) {
     try {
@@ -16,29 +18,23 @@ GLClient.controller('SubmissionCtrl',
     }
   }
 
+  if (contexts_selectable == "false" && context_id) {
+    $scope.contexts_selectable = false;
+  } else {
+    $scope.contexts_selectable = true;
+  }
+
+  if (receivers_selectable == "false" && receivers_ids) {
+    $scope.receivers_selectable = false;
+  } else {
+    $scope.receivers_selectable = true;
+  }
+
   new Submission(function (submission) {
     $scope.submission = submission;
-
-    $scope.maximumFilesize = submission.maximum_filesize;
-      
-    $scope.current_context = submission.current_context;
-
     $scope.fields = submission.fields;
     $scope.indexed_fields = submission.indexed_fields;
-
-    $scope.submission = submission;
-
-    if ($scope.submission.contexts.length == 1 && !$scope.submission.current_context.show_receivers) {
-      $scope.skip_first_step = true;
-      $scope.selection = 1;
-    } else {
-      $scope.skip_first_step = false;
-      $scope.selection = 0;
-    }
-
     $scope.submit = $scope.submission.submit;
-
-    checkReceiverSelected();
   }, context_id, receivers_ids);
 
   var checkReceiverSelected = function () {
@@ -88,7 +84,7 @@ GLClient.controller('SubmissionCtrl',
 
   // Go to a defined step index
   $scope.goToStep = function(index) {
-    if ( $scope.uploading ) {
+    if ($scope.uploading) {
       return;
     }
 
@@ -96,36 +92,34 @@ GLClient.controller('SubmissionCtrl',
   };
 
   $scope.hasNextStep = function(){
-    if ( $scope.current_context == undefined )
+    if ($scope.submission.current_context == undefined)
       return false;
 
-    return $scope.selection < $scope.current_context.steps.length;
+    return $scope.selection < $scope.submission.current_context.steps.length;
   };
 
   $scope.hasPreviousStep = function(){
-    if ( $scope.current_context == undefined )
+    if ($scope.submission.current_context == undefined)
       return false;
 
     return $scope.selection > 0;
   };
 
   $scope.incrementStep = function() {
-    if ( $scope.uploading )
+    if ($scope.uploading)
       return;
 
-    if ( $scope.hasNextStep() )
-    {
-      $scope.selection = $scope.selection + 1;
+    if ($scope.hasNextStep()) {
+      $scope.selection++;
     }
   };
 
   $scope.decrementStep = function() {
-    if ( $scope.uploading )
+    if ($scope.uploading)
       return;
 
-    if ( $scope.hasPreviousStep() )
-    {
-      $scope.selection = $scope.selection - 1;
+    if ($scope.hasPreviousStep()) {
+      $scope.selection--;
     }
   };
 
@@ -133,8 +127,17 @@ GLClient.controller('SubmissionCtrl',
 
   // Watch for changes in certain variables
   $scope.$watch('submission.current_context', function () {
-    if ($scope.current_context) {
+    if ($scope.submission && $scope.submission.current_context) {
       $scope.submission.create(function () {
+
+        if ((!receivers_selectable && !$scope.submission.current_context.show_receivers)) {
+          $scope.skip_first_step = true;
+          $scope.selection = 1;
+        } else {
+          $scope.skip_first_step = false;
+          $scope.selection = 0;
+        }
+
         $scope.fileupload_url = '/submission/' + $scope.submission.current_submission.id + '/file';
       });
       checkReceiverSelected();
@@ -146,10 +149,6 @@ GLClient.controller('SubmissionCtrl',
       checkReceiverSelected();
     }
   }, true);
-
-  $scope.$watch('submissionForm.$valid', function () {
-    $rootScope.invalidForm = $scope.submissionForm.$invalid;
-  });
 
 }]).
 controller('SubmissionStepCtrl', ['$scope', function($scope) {
@@ -199,19 +198,32 @@ controller('SubmissionFieldCtrl', ['$scope', '$rootScope', function ($scope, $ro
 controller('ReceiptController', ['$scope', '$location', 'Authentication', 'WhistleblowerTip',
   function($scope, $location, Authentication, WhistleblowerTip) {
 
-  format_keycode = function(keycode) {
+    function reverse_receipt(r){
+      return r.split("").reverse().join("");
+    }
+
+  format_keycode = function(keycode, rtl) {
     if (keycode && keycode.length == 16) {
-      return keycode.substr(0, 4) + ' ' +
+      ret =  keycode.substr(0, 4) + ' ' +
              keycode.substr(4, 4) + ' ' +
              keycode.substr(8, 4) + ' ' +
              keycode.substr(12, 4);
     } else {
-      return keycode;
+      ret = keycode;
     }
+
+    if (rtl) {
+      ret = reverse_receipt(ret);
+    }
+
+    return ret;
+
   }
 
-  $scope.keycode = Authentication.keycode;
-  $scope.formatted_keycode = format_keycode($scope.keycode);
+  $scope.keycode = format_keycode(Authentication.keycode);
+  $scope.formatted_keycode = format_keycode($scope.keycode, $scope.rtl);
+  $scope.formatted_keycode_ltr = format_keycode($scope.keycode, false);
+
   $scope.view_tip = function (keycode) {
     keycode = keycode.replace(/\D/g,'');
     WhistleblowerTip(keycode, function () {

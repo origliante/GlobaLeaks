@@ -1,8 +1,17 @@
 GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$routeParams', '$location',  '$filter', '$translate', '$modal', 'Authentication', 'Node', 'GLCache',
   function($scope, $rootScope, $http, $route, $routeParams, $location, $filter, $translate, $modal, Authentication, Node, GLCache) {
-    $scope.started = true;
-
+    $scope.started = false;
+    $scope.rtl = false;
     $scope.logo = '/static/globaleaks_logo.png';
+    $scope.build_stylesheet = "/styles.css";
+
+    var iframeCheck = function() {
+      try {
+        return window.self !== window.top;
+      } catch (e) {
+        return true;
+      }
+    }
 
     $scope.update = function (model, cb, errcb) {
       var success = {};
@@ -72,6 +81,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
 
     $scope.route_check = function () {
       if ($scope.node) {
+
         if ($scope.node.wizard_done === false) {
           $location.path('/wizard');
         }
@@ -100,7 +110,31 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
       $scope.auth_landing_page = Authentication.auth_landing_page;
       $scope.role = Authentication.role;
 
-      $scope.node = Node.get(function (node) {
+      $scope.node = Node.get(function(node, getResponseHeaders) {
+
+        // Tor detection and enforcing of usage of HS if users are using Tor
+        if (window.location.hostname.match(/^[a-z0-9]{16}\.onion$/)) {
+          // A better check on this situation would be
+          // to fetch https://check.torproject.org/api/ip
+          $rootScope.anonymous = true;
+        } else {
+          if (window.location.protocol === 'https:') {
+             headers = getResponseHeaders();
+             if (headers['x-check-tor'] !== undefined && headers['x-check-tor'] === 'true') {
+               $rootScope.anonymous = true;
+               if ($scope.node.hidden_service && !isIframe()) {
+                 // the check on the iframe is in order to avoid redirects
+                 // when the application is included inside iframes in order to not
+                 // mix HTTPS resources with HTTP resources.
+                 window.location.href = $scope.node.hidden_service + $location.url();
+               }
+             } else {
+               $rootScope.anonymous = false;
+             }
+          } else {
+            $rootScope.anonymous = false;
+          }
+        }
 
         $scope.route_check();
 
@@ -127,6 +161,9 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
         $scope.show_language_selector = ($scope.languages_enabled_length > 1);
 
         $scope.set_title();
+
+        $scope.started = true;
+
       });
 
     };
@@ -136,8 +173,9 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
     });
 
     $scope.$on('$routeChangeSuccess', function() {
-      if($location.search().lang) {
-        $rootScope.language = $scope.language = $location.search().lang;
+      var lang = $location.search().lang;
+      if(lang && $.inArray(lang, $scope.node.languages_enabled) !== -1) {
+        $rootScope.language = lang;
       }
 
       $scope.set_title();
@@ -160,9 +198,11 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
         $translate.use($rootScope.language);
 
         if (_.indexOf(["ar", "he", "ur"], newVal) !== -1) {
-          $scope.build_stylesheet = "/styles.css";
-        } else {
+          $scope.rtl = true;
           $scope.build_stylesheet = "/styles-rtl.css";
+        } else {
+          $scope.rtl = false;
+          $scope.build_stylesheet = "/styles.css";
         }
 
         $rootScope.$broadcast("REFRESH");
