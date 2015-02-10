@@ -146,9 +146,10 @@ def db_import_memory_variables(store):
         GLSetting.memory_copy.tor2web_unauth = node.tor2web_unauth
 
         GLSetting.memory_copy.allow_unencrypted = node.allow_unencrypted
+        GLSetting.memory_copy.allow_iframes_inclusion = node.allow_iframes_inclusion
 
         GLSetting.memory_copy.exception_email = node.exception_email
-        GLSetting.memory_copy.default_language = node.default_language
+        GLSetting.memory_copy.language = node.default_language
         GLSetting.memory_copy.default_timezone = node.default_timezone
 
         # Email settings are copyed because they are used when an exception raises
@@ -186,7 +187,8 @@ def apply_cli_options(store):
     accepted = {}
     if 'hostname_tor_content' in GLSetting.unchecked_tor_input:
         composed_hs_url = 'http://%s' % GLSetting.unchecked_tor_input['hostname_tor_content']
-        composed_t2w_url = 'https://%s.tor2web.org' % GLSetting.unchecked_tor_input['hostname_tor_content']
+        hs = GLSetting.unchecked_tor_input['hostname_tor_content'].split('.onion')[0]
+        composed_t2w_url = 'https://%s.tor2web.org' % hs
 
         if not (re.match(requests.hidden_service_regexp, composed_hs_url) or \
                 re.match(requests.https_url_regexp, composed_t2w_url)):
