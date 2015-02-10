@@ -396,8 +396,8 @@ class Alarm(object):
             template = notif.admin_anomaly_template
             if admin_user.language in template:
                 return template[admin_user.language]
-            elif GLSetting.memory_copy.default_language in template:
-                return template[GLSetting.memory_copy.default_language]
+            elif GLSetting.memory_copy.language in template:
+                return template[GLSetting.memory_copy.language]
             else:
                 raise Exception("Cannot find any language for admin notification")
 
@@ -495,7 +495,7 @@ class Alarm(object):
             log.err("Warning: free space alarm (HIGH): only %s" % free_memory_str)
             Alarm.stress_levels['disk_space'] = 2
         elif free_megabytes < mat:
-            log.info("Warning: free space alarm (MEDIUM): %d" % free_memory_str)
+            log.info("Warning: free space alarm (MEDIUM): %s" % free_memory_str)
             Alarm.stress_levels['disk_space'] = 1
         else:
             Alarm.stress_levels['disk_space'] = 0
