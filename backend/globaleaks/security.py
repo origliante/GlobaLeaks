@@ -306,6 +306,7 @@ class GLBGPG(object):
         """
         lines = key.split("\n")
         sanitized = ""
+        return key
 
         start = 0
         if not len(lines[start]):
