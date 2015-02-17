@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">  
+</head>
+<body>
+    <script type="text/javascript"
+        src="http://github.com/openpgpjs/openpgpjs/releases/download/v0.9.0/openpgp.js"
+    ></script>
+
+    <script type="text/javascript"
+        src="http://code.jquery.com/jquery-1.11.2.min.js"
+    ></script>
+
+    <script type="text/javascript"
+        src="/static/FileSaver.js"
+    ></script>
+
+    <script type="text/javascript"
+        src="/static/jszip.js"
+    ></script>
+
+    <script type="text/javascript"
+        src="/static/glpgp.js"
+    ></script>
+
+    <script type="text/javascript">
+
+    </script>
+
+    <section class="block">
+        <form enctype="multipart/form-data" name="submitform" id="submitform">
+            <ul>
+                <li><label>Email: </label><br />
+                <input name="email" id="email" value="john@someserver.com"></input></li>
+                <li><label>Password: </label><br />
+                <input name="password" id="password" value="123qwe"></input></li>
+            </ul>
+            <ul><li><label>generate</label>
+            <input type="button" name="submitbutton" id="submitbutton" onclick="return generate_key( $('#email').val(), $('#password').val() );" />
+            </li></ul>
+        </form>
+
+        <br/><br/><br/><br/><br/>
+        <p id="keydata">keydata message box</p>
+        <form enctype="multipart/form-data" name="submitform" id="submitform">
+            <ul>
+                <li><label>Key to be validated: </label><br /> <textarea rows="20" cols="80"
+                        name="message" id="message"></textarea></li>
+            </ul>
+            <input type="button" name="submitbutton" id="submitbutton" onclick="return validate_key();" />
+        </form>
+        <p id="privkey"></p>
+        <p id="pubkey"></p>
+
+    </section>
+
+</body>
+</html>
