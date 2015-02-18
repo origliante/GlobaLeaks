@@ -6,7 +6,8 @@
 <body>
     <script type="text/javascript"
         src="http://github.com/openpgpjs/openpgpjs/releases/download/v0.9.0/openpgp.js"
-    ></script>
+    >
+    </script>
 
     <script type="text/javascript"
         src="http://code.jquery.com/jquery-1.11.2.min.js"
@@ -26,6 +27,44 @@
 
     <script type="text/javascript">
 
+    function multikeys_test() {
+    openpgp.initWorker('/static/openpgpjs-0.10.1/dist/openpgp.worker.js');
+
+    // GENERATING KEYS
+    my_key_pair = openpgp.generateKeyPair({numBits: 1024, userId: "me@myself.com" }).then( function(m_kp) {
+
+        f_key_pair = openpgp.generateKeyPair({numBits: 1024, userId: "somebody@somewhere.com" }).then( function(f_kp) {
+
+        g_key_pair = openpgp.generateKeyPair({numBits: 1024, userId: "somebody@somewhere.com" }).then( function(g_kp) {
+            //https://github.com/whiteout-io/mail-html5/blob/69387508036ccc443a5cc2f33730ce162c556536/src/js/crypto/pgp.js#L238-L259
+            //return openpgp.signAndEncryptMessage(publicKeys, self._privateKey, plaintext);
+            //console.log(f_kp.publicKeyArmored);
+            //console.log(m_kp.publicKeyArmored);
+
+            mkeys = openpgp.key.readArmored(m_kp.publicKeyArmored);
+            fkeys = openpgp.key.readArmored(f_kp.publicKeyArmored);
+            gkeys = openpgp.key.readArmored(g_kp.publicKeyArmored);
+
+            var publicKeys = fkeys.keys + mkeys.keys;
+            raw_m = "Hello, that's a secret message!";
+
+            openpgp.encryptMessage([m_kp.key, f_kp.key, g_kp.key], raw_m).then( function(pgp_g) {
+                console.log("The message was re-encrypted, the result is:\n\n" + pgp_g);
+
+                var privateKey = openpgp.key.readArmored( m_kp.privateKeyArmored ).keys[0];
+                pgpMessage = openpgp.message.readArmored(pgp_g);
+
+                openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr) {
+                    console.log("The message was de-crypted, the result is:\n\n" + decr);
+                });
+
+            });
+
+        });
+        });
+        });
+
+    }
     </script>
 
     <section class="block">
