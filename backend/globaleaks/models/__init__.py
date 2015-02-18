@@ -592,6 +592,7 @@ class Receiver(Model):
     gpg_key_info = Unicode()
     gpg_key_fingerprint = Unicode()
     gpg_key_armor = Unicode()
+    pgp_key_armor_priv = Unicode()
     gpg_key_expiration = DateTime()
 
     gpg_key_status = Unicode()

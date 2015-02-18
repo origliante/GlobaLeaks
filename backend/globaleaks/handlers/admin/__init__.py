@@ -283,6 +283,7 @@ def admin_serialize_receiver(receiver, language):
         "contexts": [c.id for c in receiver.contexts],
         "gpg_key_info": receiver.gpg_key_info,
         "gpg_key_armor": receiver.gpg_key_armor,
+        "pgp_key_armor_priv": receiver.pgp_key_armor_priv,
         "gpg_key_remove": False,
         "gpg_key_fingerprint": receiver.gpg_key_fingerprint,
         "gpg_key_expiration": datetime_to_ISO8601(receiver.gpg_key_expiration),

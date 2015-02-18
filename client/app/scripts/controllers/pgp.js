@@ -3,8 +3,6 @@ GLClient.controller('PGPConfigCtrl', ['$scope', function($scope){
 
 
     $scope.generate_key = function() {
-            $scope.receiver.gpg_key_armor = "ANTANI";
-
             var email = 'a@b.org';
             var password = 'abc123';
 
@@ -13,9 +11,13 @@ GLClient.controller('PGPConfigCtrl', ['$scope', function($scope){
             var k_bits = 4096;
             var k_bits = 2048;
 
+            openpgp.config.show_comment = false;
+            openpgp.config.show_version = false;
+
             var key = openpgp.generateKeyPair({ numBits: k_bits,
                                                 userId: k_user_id,
-                                                passphrase: k_passphrase}).then(function(keyPair) {
+                                                //passphrase: k_passphrase
+                                                }).then(function(keyPair) {
                     var zip = new JSZip();
                     var user_id = k_user_id.replace("@", "_at_");
                     var user_id = user_id.replace(".", "_dot_");
@@ -29,16 +31,23 @@ GLClient.controller('PGPConfigCtrl', ['$scope', function($scope){
                     var content = zip.generate({type:"blob"});
                     saveAs(content, file_name );
 
-                    var pubkey = keyPair.publicKeyArmored;
+                    /*var pubkey = keyPair.publicKeyArmored;
                     idx = pubkey.length - 1;
                     while ( pubkey[idx] != '-' ) {
                         pubkey = pubkey.slice(0, idx);
                         idx -= 1;
-                    }
-                    console.log(pubkey);
+                    }*/
 
-                    $scope.receiver.gpg_key_armor = keyPair.publicKeyArmored;
-                    $scope.$apply();
+                    if ($scope.receiver) {
+                        $scope.receiver.gpg_key_armor = keyPair.publicKeyArmored.trim();
+                        $scope.receiver.pgp_key_armor_priv = keyPair.privateKeyArmored.trim();
+                        $scope.$apply();
+                    } else if ($scope.preferences) {
+                        $scope.preferences.gpg_key_armor = keyPair.publicKeyArmored.trim();
+                        $scope.preferences.pgp_key_armor_priv = keyPair.privateKeyArmored.trim();
+                        $scope.$apply();
+                    }
+
                 });
 
             return true;

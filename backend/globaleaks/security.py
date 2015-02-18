@@ -492,7 +492,8 @@ def gpg_options_parse(receiver, request):
     Further improvement: update the keys using keyserver
     """
 
-    new_gpg_key = request.get('gpg_key_armor', None)
+    new_pub_key = request.get('gpg_key_armor', None)
+    new_priv_key = request.get('pgp_key_armor_priv', None)
     remove_key = request.get('gpg_key_remove', False)
 
     # the default
@@ -506,21 +507,23 @@ def gpg_options_parse(receiver, request):
         receiver.gpg_key_status = u'disabled'
         receiver.gpg_key_info = None
         receiver.gpg_key_armor = None
+        receiver.pgp_key_armor_priv = None
         receiver.gpg_key_fingerprint = None
         receiver.gpg_key_expiration = datetime_null()
 
-    if new_gpg_key:
+    if new_pub_key and new_priv_key:
 
         try:
             gnob = GLBGPG()
 
-            result = gnob.load_key(new_gpg_key)
+            result = gnob.load_key(new_pub_key)
 
             log.debug("GPG Key imported: %s" % result['fingerprint'])
 
             receiver.gpg_key_status = u'enabled'
             receiver.gpg_key_info = result['info']
-            receiver.gpg_key_armor = new_gpg_key
+            receiver.gpg_key_armor = new_pub_key
+            receiver.pgp_key_armor_priv = new_priv_key
             receiver.gpg_key_fingerprint = result['fingerprint']
             receiver.gpg_key_expiration = result['expiration']
 

@@ -30,6 +30,7 @@ def receiver_serialize_receiver(receiver, language):
         "gpg_key_fingerprint": receiver.gpg_key_fingerprint,
         "gpg_key_remove": False,
         "gpg_key_armor": receiver.gpg_key_armor,
+        "pgp_key_armor_priv": receiver.pgp_key_armor_priv,
         "gpg_key_expiration": datetime_to_ISO8601(receiver.gpg_key_expiration),
         "gpg_key_status": receiver.gpg_key_status,
         "tip_notification" : receiver.tip_notification,
