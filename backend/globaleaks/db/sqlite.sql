@@ -222,6 +222,8 @@ CREATE TABLE receiver (
     gpg_key_armor VARCHAR,
     pgp_key_armor_priv VARCHAR,
     gpg_key_expiration INTEGER,
+    pgp_glkey_pub VARCHAR,
+    pgp_glkey_priv VARCHAR,
     presentation_order INTEGER,
     PRIMARY KEY (id),
     UNIQUE (name),

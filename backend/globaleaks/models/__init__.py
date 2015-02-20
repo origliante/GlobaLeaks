@@ -592,11 +592,13 @@ class Receiver(Model):
     gpg_key_info = Unicode()
     gpg_key_fingerprint = Unicode()
     gpg_key_armor = Unicode()
-    pgp_key_armor_priv = Unicode()
     gpg_key_expiration = DateTime()
-
     gpg_key_status = Unicode()
     # gpg_statuses = [u'disabled', u'enabled']
+
+    pgp_key_armor_priv = Unicode()
+    pgp_glkey_pub = Unicode()
+    pgp_glkey_priv = Unicode()
 
     # Can be changed only by admin (but also differ from username!)
     mail_address = Unicode()

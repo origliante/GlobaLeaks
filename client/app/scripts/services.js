@@ -738,6 +738,9 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         receiver.gpg_key_expiration = '';
         receiver.gpg_key_status = 'ignored';
         receiver.gpg_enable_notification = false;
+        receiver.pgp_key_armor_priv = '';
+        receiver.pgp_glkey_pub = '';
+        receiver.pgp_glkey_priv = '';
         receiver.presentation_order = 0;
         receiver.state = 'enable';
         receiver.configuration = 'default';

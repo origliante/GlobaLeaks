@@ -30,9 +30,11 @@ def receiver_serialize_receiver(receiver, language):
         "gpg_key_fingerprint": receiver.gpg_key_fingerprint,
         "gpg_key_remove": False,
         "gpg_key_armor": receiver.gpg_key_armor,
-        "pgp_key_armor_priv": receiver.pgp_key_armor_priv,
         "gpg_key_expiration": datetime_to_ISO8601(receiver.gpg_key_expiration),
         "gpg_key_status": receiver.gpg_key_status,
+        "pgp_key_armor_priv": receiver.pgp_key_armor_priv,
+        "pgp_glkey_pub": receiver.pgp_glkey_pub,
+        "pgp_glkey_priv": receiver.pgp_glkey_priv,
         "tip_notification" : receiver.tip_notification,
         "file_notification" : receiver.file_notification,
         "comment_notification" : receiver.comment_notification,
@@ -127,6 +129,9 @@ def update_receiver_settings(store, receiver_id, request, language):
     receiver.ping_notification = acquire_bool(request['ping_notification'])
 
     gpg_options_parse(receiver, request)
+    #TODO: validate armored pgp keys
+    receiver.pgp_glkey_pub = request['pgp_glkey_pub']
+    receiver.pgp_glkey_priv = request['pgp_glkey_priv']
 
     return receiver_serialize_receiver(receiver, language)
 
