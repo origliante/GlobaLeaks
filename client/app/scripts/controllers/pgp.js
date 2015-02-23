@@ -24,19 +24,12 @@ GLClient.controller('PGPConfigCtrl', ['$scope', function($scope){
                     var folder_name = "globaleaks-keys-" + user_id
                     var file_name = folder_name + '.zip'
 
-                    var keys = zip.folder( folder_name );
-                    keys.file("private_" + user_id + ".asc", keyPair.privateKeyArmored );
-                    keys.file("public_" + user_id + ".asc", keyPair.publicKeyArmored );
+                    var keys = zip.folder(folder_name);
+                    keys.file("private.asc", keyPair.privateKeyArmored);
+                    keys.file("public.asc", keyPair.publicKeyArmored);
 
                     var content = zip.generate({type:"blob"});
-                    saveAs(content, file_name );
-
-                    /*var pubkey = keyPair.publicKeyArmored;
-                    idx = pubkey.length - 1;
-                    while ( pubkey[idx] != '-' ) {
-                        pubkey = pubkey.slice(0, idx);
-                        idx -= 1;
-                    }*/
+                    saveAs(content, file_name);
 
                     if ($scope.receiver) {
                         $scope.receiver.gpg_key_armor = keyPair.publicKeyArmored.trim();
