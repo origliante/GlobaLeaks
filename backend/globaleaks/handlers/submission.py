@@ -34,7 +34,9 @@ def wb_serialize_internaltip(internaltip):
         'access_limit' : internaltip.access_limit,
         'mark' : internaltip.mark,
         'files' : [f.id for f in internaltip.internalfiles],
-        'receivers' : [r.id for r in internaltip.receivers]
+        'receivers' : [r.id for r in internaltip.receivers],
+        'pgp_glkey_pub': internaltip.pgp_glkey_pub,
+        'pgp_glkey_priv': internaltip.pgp_glkey_priv
     }
 
     return response
@@ -205,9 +207,10 @@ def db_create_submission(store, request, finalize, language):
     try:
         wb_steps = request['wb_steps']
 
+        #TODO: e2e - move verify_steps in the receiver frontend js code 
         if finalize:
             steps = db_get_context_steps(store, context.id, language)
-            verify_steps(steps, wb_steps)
+            #verify_steps(steps, wb_steps)
 
         submission.wb_steps = wb_steps
     except Exception as excep:
@@ -258,7 +261,8 @@ def db_update_submission(store, submission_id, request, finalize, language):
         wb_steps = request['wb_steps']
         if finalize:
             steps = db_get_context_steps(store, context.id, language)
-            verify_steps(steps, wb_steps)
+            #TODO: move to client code
+            #verify_steps(steps, wb_steps)
 
         submission.wb_steps = wb_steps
     except Exception as excep:
@@ -275,6 +279,10 @@ def db_update_submission(store, submission_id, request, finalize, language):
 
     if finalize:
         submission.mark = u'finalize'  # Finalized
+
+        #TODO: validation
+        submission.pgp_glkey_pub = request['pgp_glkey_pub']
+        submission.pgp_glkey_priv = request['pgp_glkey_priv']
     else:
         submission.mark = u'submission' # Submission
 

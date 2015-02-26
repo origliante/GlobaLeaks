@@ -354,7 +354,8 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         self.current_submission = new submissionResource({
           context_id: self.current_context.id,
           wb_steps: _.clone(self.current_context.steps),
-          files: [], finalize: false, receivers: []
+          files: [], finalize: false, receivers: [],
+          pgp_glkey_pub: "", pgp_glkey_priv: ""
         });
 
         setCurrentContextReceivers();
@@ -400,14 +401,26 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
           }
         });
 
-        self.current_submission.finalize = true;
+        //TODO: generate receipt and passphrase
+        openpgp.config.show_comment = false;
+        openpgp.config.show_version = false;
+        openpgp.generateKeyPair({
+            numBits: 2048,
+            //passphrase: "",
+            userId: "somebody@somewhere.com" }).then( function(tkp) {
 
-        self.current_submission.$submit(function(result){
-          if (result) {
-            Authentication.keycode = self.current_submission.receipt;
-            $location.url("/receipt");
-          }
-        });
+            self.current_submission.finalize = true;
+            self.current_submission.pgp_glkey_pub = tkp.publicKeyArmored;
+            self.current_submission.pgp_glkey_priv = tkp.privateKeyArmored;
+            //TODO: encrypt wb_steps
+
+            self.current_submission.$submit(function(result) {
+                if (result) {
+                    Authentication.keycode = self.current_submission.receipt;
+                    $location.url("/receipt");
+                }
+            });
+      });
 
       };
 

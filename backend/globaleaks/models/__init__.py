@@ -249,6 +249,9 @@ class InternalTip(Model):
     mark = Unicode()
     # markers = [u'submission', u'finalize', u'first']
 
+    pgp_glkey_pub = Unicode()
+    pgp_glkey_priv = Unicode()
+
 
 class ReceiverTip(Model):
     """

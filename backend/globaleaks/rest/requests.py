@@ -55,6 +55,8 @@ wbSubmissionDesc = {
     'receivers' : [ uuid_regexp ],
     'files' : [ uuid_regexp ],
     'finalize' : bool,
+    'pgp_glkey_pub': unicode,
+    'pgp_glkey_priv': unicode
 }
 
 receiverReceiverDesc = {
