@@ -290,31 +290,42 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
       var setCurrentContextReceivers = function() {
         self.receivers_selected = {};
+        self.receivers_selected_keys = [];
         self.current_context_receivers = [];
+
         forEach(self.receivers, function(receiver){
+
           // enumerate only the receivers of the current context
           if (self.current_context.receivers.indexOf(receiver.id) !== -1) {
             self.current_context_receivers.push(receiver);
 
             if (!self.current_context.show_receivers) {
                 self.receivers_selected[receiver.id] = true;
+                self.receivers_selected_keys.push(receiver.pgp_glkey_pub);
                 return;
             }
 
             if (receivers_ids) {
               if (receivers_ids.indexOf(receiver.id) != -1) {
                 self.receivers_selected[receiver.id] = true;
+                self.receivers_selected_keys.push(receiver.pgp_glkey_pub);
                 return;
               }
             }
 
-            if (receiver.configuration == 'default') {
-              self.receivers_selected[receiver.id] = self.current_context.select_all_receivers != false;
+            if (receiver.configuration == 'default' && self.current_context.select_all_receivers) {
+              self.receivers_selected[receiver.id] = true;
+              self.receivers_selected_keys.push(receiver.pgp_glkey_pub);
             } else if (receiver.configuration == 'forcefully_selected') {
               self.receivers_selected[receiver.id] = true;
+              self.receivers_selected_keys.push(receiver.pgp_glkey_pub);
             }
           }
         });
+
+        console.log('hey ', self.receivers_selected_keys);
+        console.log('you ', self.receivers_selected);
+
       };
 
       Node.get(function(node) {
@@ -351,6 +362,8 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
        *
        * */
       self.create = function(cb) {
+        //TODO: encrypt wb_steps here also
+
         self.current_submission = new submissionResource({
           context_id: self.current_context.id,
           wb_steps: _.clone(self.current_context.steps),
@@ -412,14 +425,37 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
             self.current_submission.finalize = true;
             self.current_submission.pgp_glkey_pub = tkp.publicKeyArmored;
             self.current_submission.pgp_glkey_priv = tkp.privateKeyArmored;
-            //TODO: encrypt wb_steps
 
-            self.current_submission.$submit(function(result) {
-                if (result) {
-                    Authentication.keycode = self.current_submission.receipt;
-                    $location.url("/receipt");
-                }
+            var receivers_and_wb_keys = [];
+            _.each(self.receivers_selected_keys, function(key) {
+                receivers_and_wb_keys.push( openpgp.key.readArmored(key) );
             });
+            var wb_pub = openpgp.key.readArmored( tkp.publicKeyArmored ).keys[0];
+            receivers_and_wb_keys.push( wb_pub );
+
+            var wb_steps = JSON.stringify(self.current_submission.wb_steps);
+
+            console.log(receivers_and_wb_keys);
+            console.log(wb_steps);
+
+            openpgp.encryptMessage(receivers_and_wb_keys, wb_steps).then( function(pgp_wb_steps) {
+                /*console.log("The message was re-encrypted, the result is:\n\n" + pgp_g);
+                var privateKey = openpgp.key.readArmored( tkp.privateKeyArmored ).keys[0];
+                var pgpMessage = openpgp.message.readArmored(pgp_g);
+                openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr) {
+                    console.log("The message was de-crypted, the result is:\n\n" + decr);
+                });*/
+                self.current_submission.wb_steps = [pgp_wb_steps,];
+
+                self.current_submission.$submit(function(result) {
+                    if (result) {
+                        Authentication.keycode = self.current_submission.receipt;
+                        $location.url("/receipt");
+                    }
+                });
+
+            });
+
       });
 
       };
@@ -443,9 +479,16 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
       tipResource.get(tipID, function(result){
 
+        var privateKey = openpgp.key.readArmored( result.pgp_glkey_priv ).keys[0];
+        var pgpMessage = openpgp.message.readArmored( result.wb_steps[0] );
+
+        openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_wb_steps) {
+
         receiversResource.query(tipID, function(receiversCollection){
 
           self.tip = result;
+          var json_wb_steps = JSON.parse(decr_wb_steps);
+          self.tip.wb_steps = json_wb_steps;
 
           self.tip.comments = [];
           self.tip.messages = [];
@@ -485,6 +528,10 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
           });
 
         });
+
+        }); // openpgp
+
+
       });
 
     };

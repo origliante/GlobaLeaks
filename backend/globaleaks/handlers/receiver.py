@@ -241,10 +241,13 @@ def get_receiver_tip_list(store, receiver_id, language):
 
         preview_data = []
 
-        for s in rtip.internaltip.wb_steps:
-            for f in s['children']:
-                if f['preview']:
-                    preview_data.append(f)
+        try:
+            for s in rtip.internaltip.wb_steps:
+                for f in s['children']:
+                    if f['preview']:
+                        preview_data.append(f)
+        except:
+            preview_data = ['wb_steps_is_encrypted']
 
         single_tip_sum.update({ 'preview' : preview_data })
         rtip_summary_list.append(single_tip_sum)
