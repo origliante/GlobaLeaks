@@ -31,6 +31,8 @@ def wb_serialize_tip(internaltip, language):
         'wb_steps' : internaltip.wb_steps,
         'enable_private_messages' : internaltip.context.enable_private_messages,
         'show_receivers': internaltip.context.show_receivers, 
+        'pgp_glkey_pub': internaltip.pgp_glkey_pub,
+        'pgp_glkey_priv': internaltip.pgp_glkey_priv,
     }
 
     # context_name and context_description are localized fields

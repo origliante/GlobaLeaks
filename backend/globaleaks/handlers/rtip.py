@@ -40,7 +40,7 @@ def receiver_serialize_internal_tip(internaltip, language):
         'extend' : False,
         'enable_private_messages': internaltip.context.enable_private_messages,
         'pgp_glkey_pub': internaltip.pgp_glkey_pub,
-        'pgp_glkey_priv': internaltip.pgp_glkey_priv
+        'pgp_glkey_priv': internaltip.pgp_glkey_priv,
     }
 
     # context_name and context_description are localized fields

@@ -287,6 +287,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
       self.current_context_receivers = [];
       self.current_submission = null; 
       self.receivers_selected = {};
+      self.receivers_selected_keys = [];
 
       var setCurrentContextReceivers = function() {
         self.receivers_selected = {};
@@ -294,6 +295,8 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         self.current_context_receivers = [];
 
         forEach(self.receivers, function(receiver){
+
+          console.log('key -- ', receiver.pgp_glkey_pub);
 
           // enumerate only the receivers of the current context
           if (self.current_context.receivers.indexOf(receiver.id) !== -1) {
@@ -323,10 +326,9 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
           }
         });
 
-        console.log('hey ', self.receivers_selected_keys);
-        console.log('you ', self.receivers_selected);
-
       };
+      console.log('hey ', self.receivers_selected_keys);
+      console.log('you ', self.receivers_selected);
 
       Node.get(function(node) {
         self.maximum_filesize = node.maximum_filesize;
@@ -434,9 +436,8 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
             receivers_and_wb_keys.push( wb_pub );
 
             var wb_steps = JSON.stringify(self.current_submission.wb_steps);
-
-            console.log(receivers_and_wb_keys);
-            console.log(wb_steps);
+            //console.log(receivers_and_wb_keys);
+            //console.log(wb_steps);
 
             openpgp.encryptMessage(receivers_and_wb_keys, wb_steps).then( function(pgp_wb_steps) {
                 /*console.log("The message was re-encrypted, the result is:\n\n" + pgp_g);
@@ -552,9 +553,16 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
       tipResource.get(function(result) {
 
+        var privateKey = openpgp.key.readArmored( result.pgp_glkey_priv ).keys[0];
+        var pgpMessage = openpgp.message.readArmored( result.wb_steps[0] );
+
+        openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_wb_steps) {
+
         receiversResource.query(function(receiversCollection) {
 
           self.tip = result;
+          var json_wb_steps = JSON.parse(decr_wb_steps);
+          self.tip.wb_steps = json_wb_steps;
 
           self.tip.comments = [];
           self.tip.messages = [];
@@ -611,6 +619,9 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
           fn(self.tip);
 
         });
+
+        }); //openpgp
+
       });
 
     };
