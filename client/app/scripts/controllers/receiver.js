@@ -95,9 +95,9 @@ GLClient.controller('ReceiverPreferencesCtrl', ['$scope', '$rootScope', 'Receive
 
       if (! $scope.preferences.pgp_glkey_pub ) {
             var k_user_id = $scope.preferences.email;
+            //TODO: receiver email if present?
             var k_user_id = 'fake@email.com';
             var k_passphrase = $scope.preferences.password;
-            //var k_bits = 4096;
             var k_bits = 2048;
 
             key = openpgp.generateKeyPair({ numBits: k_bits,

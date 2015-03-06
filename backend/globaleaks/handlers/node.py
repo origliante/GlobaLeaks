@@ -246,7 +246,8 @@ def anon_serialize_receiver(receiver, language):
         "configuration": receiver.configuration, 
         "presentation_order": receiver.presentation_order,
         "gpg_key_status": receiver.gpg_key_status,
-        "contexts": contexts
+        "contexts": contexts,
+        "pgp_glkey_pub": receiver.pgp_glkey_pub,
     }
 
     return get_localized_values(ret_dict, receiver, receiver.localized_strings, language)
