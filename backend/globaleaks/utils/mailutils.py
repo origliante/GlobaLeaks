@@ -53,8 +53,11 @@ def rfc822_date():
     nowtimestamp = timegm(nowtuple)
     return mailutils.formatdate(nowtimestamp)
 
+
+
+
 def sendmail(authentication_username, authentication_password, from_address,
-             to_address, message_file, smtp_host, smtp_port, security, event=None):
+             to_address, message_file, smtp_host, smtp_port, security, event=None, notif_retries=2, notif_timeout=10, result_debug_callback=None):
     """
     Sends an email using SSLv3 over SMTP
 
@@ -68,8 +71,7 @@ def sendmail(authentication_username, authentication_password, from_address,
     @param security: may need to be STRING, here is converted at start
     @param event: the event description, needed to keep track of failure/success
     """
-    def printError(reason, event):
-
+    def printError(method, reason, event):
         # XXX is catch a wrong TCP port, but not wrong SSL protocol, here
         if event:
             log.err("** failed notification within event %s" % event.type)
@@ -78,27 +80,27 @@ def sendmail(authentication_username, authentication_password, from_address,
         # TODO It's defined in plugin/base.py
 
         if isinstance(reason, Failure):
-            log.err("Failed to contact %s:%d (Sock Error %s)" %
-                    (smtp_host, smtp_port, reason.type))
+            log.err("Failed to connect to %s:%d (Sock Error: %s) (Method: %s)" %
+                    (smtp_host, smtp_port, reason.value, method))
             log.debug(reason)
 
-    def handle_error(reason, *args, **kwargs):
-        # XXX event is not an argument here ?
-        printError(reason, event)
+    def esmtp_errback(reason, *args, **kwargs):
+        printError("esmtp", reason, event)
         return result_deferred.errback(reason)
 
-    def protocolConnectionLost(self, reason=protocol.connectionDone):
-        """We are no longer connected"""
-        if isinstance(reason, Failure):
-            if not isinstance(reason.value, error.ConnectionDone):
-                log.err("Failed to contact %s:%d (ConnectionLost Error %s)"
-                        % (smtp_host, smtp_port, reason.type))
-                log.debug(reason)
+    def socks_errback(reason, *args, **kwargs):
+        printError("SOCKS5", reason, event)
+        return result_deferred.errback(reason)
 
-        self.setTimeout(None)
-        self.mailFile = None
+    def tcp4_errback(reason, *args, **kwargs):
+        printError("TCP4", reason, event)
+        return result_deferred.errback(reason)
 
-    def sendError(self, exc):
+    def result_errback(reason, *args, **kwargs):
+        "To not report an error as unexpected in the log files"
+        return True
+
+    def esmtp_sendError(self, exc):
         if exc.code and exc.resp:
             error = re.match(r'^([0-9\.]+) ', exc.resp)
             error_str = ""
@@ -107,63 +109,104 @@ def sendmail(authentication_username, authentication_password, from_address,
                 key = str(exc.code) + " " + error.group(1)
                 if key in smtp_errors:
                     error_str +=  " " + smtp_errors[key]
-                    
-            log.err("Failed to contact %s:%d (SMTP Error: %.3d %s)"
-                    % (smtp_host, smtp_port, exc.code, error_str))
-            log.debug("Failed to contact %s:%d (SMTP Error: %.3d %s)"
-                    % (smtp_host, smtp_port, exc.code, exc.resp))
+
+            verb = 'unknown_verb'
+            if 'authentication' in exc.resp:
+                verb = 'autenticate'
+            if 'not support secure' in exc.resp:
+                verb = 'negotiate TLS'
+
+            log.err("Failed to %s to %s:%d (SMTP Code: %.3d) (%s)"
+                    % (verb, smtp_host, smtp_port, exc.code, exc.resp))
+            log.debug("Failed to %s to %s:%d (SMTP Code: %.3d) (%s)"
+                    % (verb, smtp_host, smtp_port, exc.code, exc.resp))
+        #???
         SMTPClient.sendError(self, exc)
 
+
+    def esmtp_connectionLost(self, reason=protocol.connectionDone):
+        """We are no longer connected"""
+        if isinstance(reason, Failure):
+            if not isinstance(reason.value, error.ConnectionDone):
+                verb = 'unknown_verb'
+                if 'OpenSSL' in str(reason.type):
+                    verb = 'negotiate SSL'
+
+                log.err("Failed to %s to %s:%d (%s)"
+                        % (verb, smtp_host, smtp_port, reason.type))
+                log.debug(reason)
+
+        self.setTimeout(None)
+        self.mailFile = None
+
+
+    #TODO: validation?
     if from_address == '' or to_address == '':
-        log.err("Failed to send email")
-        log.err("Invalid from/to addresses: ('%s', '%s')"
+        log.err("Failed to init sendmail to %s:%s (Invalid from/to addresses)"
                  % (from_address, to_address))
         return
 
+    if security != "SSL" and security != "disabled":
+        requireTransportSecurity = True
+    else:
+        requireTransportSecurity = False
+
     try:
-        security = str(security)
         result_deferred = Deferred()
+        result_deferred.addErrback(result_errback, event)
+        if result_debug_callback:
+            result_deferred.addCallback(result_debug_callback)
+
         context_factory = ClientContextFactory()
         context_factory.method = SSL.SSLv3_METHOD
-
-        if security != "SSL":
-            requireTransportSecurity = True
-        else:
-            requireTransportSecurity = False
-
         esmtp_deferred = Deferred()
-        esmtp_deferred.addErrback(handle_error, event)
+        esmtp_deferred.addErrback(esmtp_errback, event)
         esmtp_deferred.addCallback(result_deferred.callback)
+    except Exception as excep:
+        log.err("Error in Twisted objects init - unexpected exception in sendmail: %s" % str(excep))
+        return fail()
 
+    try:
         factory = ESMTPSenderFactory(
             authentication_username,
             authentication_password,
+
             from_address,
             to_address,
+
             message_file,
+
             esmtp_deferred,
+
             contextFactory=context_factory,
             requireAuthentication=(authentication_username and authentication_password),
-            requireTransportSecurity=requireTransportSecurity)
+            requireTransportSecurity=requireTransportSecurity,
+            retries=notif_retries,
+            timeout=notif_timeout)
 
-        factory.protocol.sendError = sendError
-        factory.protocol.connectionLost = protocolConnectionLost
+        factory.protocol.sendError = esmtp_sendError
+        factory.protocol.connectionLost = esmtp_connectionLost
 
         if security == "SSL":
             factory = tls.TLSMemoryBIOFactory(context_factory, True, factory)
 
-        if GLSetting.tor_socks_enable:
-            socksProxy = TCP4ClientEndpoint(reactor, GLSetting.socks_host, GLSetting.socks_port)
-            endpoint = SOCKS5ClientEndpoint(smtp_host.encode('utf-8'), smtp_port, socksProxy)
-        else:
-            endpoint = TCP4ClientEndpoint(reactor, smtp_host, smtp_port)
+    except Exception as excep:
+        log.err("Error in factory init - unexpected exception in sendmail: %s" % str(excep))
+        return fail()
 
-        d = endpoint.connect(factory)
-        d.addErrback(handle_error, event)
+    try:
+        if GLSetting.memory_copy.notif_use_tor:
+            socksProxy = TCP4ClientEndpoint(reactor, GLSetting.socks_host, GLSetting.socks_port, timeout=notif_timeout)
+            endpoint = SOCKS5ClientEndpoint(smtp_host.encode('utf-8'), smtp_port, socksProxy)
+            d = endpoint.connect(factory)
+            d.addErrback(socks_errback, event)
+        else:
+            endpoint = TCP4ClientEndpoint(reactor, smtp_host, smtp_port, timeout=notif_timeout)
+            d = endpoint.connect(factory)
+            d.addErrback(tcp4_errback, event)
 
     except Exception as excep:
-        # we strongly need to avoid raising exception inside email logic to avoid chained errors
-        log.err("unexpected exception in sendmail: %s" % str(excep))
+        log.err("Error in endpoint init/connect - unexpected exception in sendmail: %s" % str(excep))
         return fail()
 
     return result_deferred
