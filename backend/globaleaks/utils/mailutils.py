@@ -191,7 +191,7 @@ def sendmail(authentication_username, authentication_password, from_address,
         return fail()
 
     try:
-        if GLSetting.memory_copy.tor_socks_enable:
+        if GLSetting.tor_socks_enable:
             socksProxy = TCP4ClientEndpoint(reactor, GLSetting.socks_host, GLSetting.socks_port, timeout=notif_timeout)
             endpoint = SOCKS5ClientEndpoint(smtp_host.encode('utf-8'), smtp_port, socksProxy)
             d = endpoint.connect(factory)

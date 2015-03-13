@@ -202,7 +202,7 @@
 
         //var scrypt = scrypt_module_factory(33554432*2);
         // rounds must be power of 2
-        function scrypt_hash(password, rounds) {
+        function scrypt_hash(password, rounds, scrypt) {
             var utf8_pwd = scrypt.encode_utf8(password);
             var salt = "This is the salt.";
 
@@ -211,21 +211,21 @@
         }
 
         function gl_password(password) {
-            return password;
+            //return password;
 
             var scrypt = scrypt_module_factory(33554432);
-            return scrypt_hash(password, 4096);
-
-            //return pbkdf2_deriveAKey(password, 1000);
+            var key = scrypt_hash(password, 4096, scrypt);
+            console.log('gl_password for ', password, ' is ', key);
+            return key;
         }
         function gl_passphrase(passphrase) {
-            return passphrase;
+            //return passphrase;
+            //16384 is minimum suggested for interactive logins
 
             var scrypt = scrypt_module_factory(33554432);
-            //16384 suggested for interactive logins
-            return scrypt_hash(passphrase, 8192);
-
-            //return pbkdf2_deriveAKey(passphrase, 2000);
+            var key = scrypt_hash(passphrase, 8192, scrypt);
+            console.log('gl_passphrase for ', passphrase, ' is ', key);
+            return key;
         }
     </script>
  

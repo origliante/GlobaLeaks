@@ -104,10 +104,6 @@ GLClient.controller('ReceiverPreferencesCtrl', ['$scope', '$rootScope', 'Receive
       console.log('old login password ', $scope.preferences.old_password, ' ', old_password);
       console.log('update passphrase ', new_passphrase);
 
-      $scope.preferences.old_password = old_password;
-      $scope.preferences.password = new_password;
-      $scope.preferences.check_password = new_password;
-
       if (! $scope.preferences.pgp_glkey_pub ) {
 
             //TODO: receiver email if present
@@ -125,6 +121,9 @@ GLClient.controller('ReceiverPreferencesCtrl', ['$scope', '$rootScope', 'Receive
 
                 $scope.preferences.pgp_glkey_pub = keyPair.publicKeyArmored;
                 $scope.preferences.pgp_glkey_priv = keyPair.privateKeyArmored;
+                $scope.preferences.old_password = old_password;
+                $scope.preferences.password = new_password;
+                $scope.preferences.check_password = new_password;
 
                 $scope.preferences.$update(function () {
                     if (!$rootScope.successes) {
@@ -137,7 +136,7 @@ GLClient.controller('ReceiverPreferencesCtrl', ['$scope', '$rootScope', 'Receive
 
       } else {
             var old_passphrase = gl_passphrase($scope.preferences.old_password);
-            console.log('update old passphrase ', old_passphrase);
+            console.log('update old passphrase ', $scope.preferences.old_password, ' ', old_passphrase);
 
             try {
                 privKey = openpgp.key.readArmored( $scope.preferences.pgp_glkey_priv ).keys[0];
@@ -160,6 +159,9 @@ GLClient.controller('ReceiverPreferencesCtrl', ['$scope', '$rootScope', 'Receive
                 throw new Error('Decrypting key with new passphrase failed!');
             }
             $scope.preferences.pgp_glkey_priv = newKeyArmored;
+            $scope.preferences.old_password = old_password;
+            $scope.preferences.password = new_password;
+            $scope.preferences.check_password = new_password;
 
             $scope.preferences.$update(function () {
                 if (!$rootScope.successes) {
