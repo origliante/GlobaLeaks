@@ -246,6 +246,7 @@ def get_receiver_list_wb(store, wb_tip_id, language):
                 "read_messages" : 0,
                 "your_messages" : 0,
                 "creation_date" : datetime_to_ISO8601(datetime_now()),
+                "pgp_glkey_pub": receiver.pgp_glkey_pub,
                 # XXX ReceiverTip last activity ?
             }
 
@@ -254,7 +255,7 @@ def get_receiver_list_wb(store, wb_tip_id, language):
             receiver_desc["description"] = mo.dump_localized_attr("description", language)
 
             receiver_list.append(receiver_desc)
-
+        
         return receiver_list
     else:
         receiver_list = []
@@ -284,6 +285,7 @@ def get_receiver_list_wb(store, wb_tip_id, language):
                 "read_messages" : read_messages,
                 "your_messages" : your_messages,
                 "creation_date" : datetime_to_ISO8601(datetime_now()),
+                "pgp_glkey_pub": rtip.receiver.pgp_glkey_pub,
                 # XXX ReceiverTip last activity ?
             }
 
