@@ -37,6 +37,7 @@
     "jquery-ui": "1.11.2",
     "jszip": "2.4.0",
     "openpgpjs": "https://github.com/openpgpjs/openpgpjs/releases/download/v0.10.0/openpgp.js",
+    "scrypt": "https://raw.githubusercontent.com/tonyg/js-scrypt/master/browser/scrypt.js",
     "underscore": "1.7.0",
     "FileSaver": "git://github.com/eligrey/FileSaver.js.git#24b303f492"
   },

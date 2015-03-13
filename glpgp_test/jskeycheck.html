@@ -13,7 +13,7 @@
     ></script>
 
     <script type="text/javascript"
-        src="/static/openpgp.js"
+        src="static/openpgp.js"
     ></script>
 
     <script type="text/javascript"
@@ -33,6 +33,77 @@
         var salt = CryptoJS.lib.WordArray.random(128/8);
         var key = CryptoJS.PBKDF2("Secret Passphrase", salt, { keySize: 512/32, iterations: 1000 });
         return key;
+    }
+
+    function keytest() {
+        var keytest_str = "-----BEGIN PGP PRIVATE KEY BLOCK-----
+
+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
+=N60n
+-----END PGP PRIVATE KEY BLOCK-----"
+
+        var privateKey = openpgp.key.readArmored( keytest_str ).keys[0];
+        //var privateKey = openpgp.key.readArmored( keytest_str ).keys[0];
+        console.log(privateKey);
+        var ret = privateKey.decrypt( '7543bc2fd036dd073e1a36e906b17ebd' );
+        console.log( privateKey.isDecrypted );
+
     }
 
 

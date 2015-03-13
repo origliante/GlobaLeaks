@@ -22,6 +22,14 @@ angular.module('resourceServices.authentication', [])
         };
 
         $rootScope.login = function(username, password, role, cb) {
+
+          if (role == 'receiver' && password != 'globaleaks') {
+            var pwd = gl_password(password);
+            var passphrase = gl_passphrase(password);
+            $rootScope.receiver_key_passphrase = passphrase;
+            password = pwd;
+          }
+
           return $http.post('/authentication', {'username': username,
                                                 'password': password,
                                                 'role': role})
@@ -295,9 +303,8 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         self.current_context_receivers = [];
 
         forEach(self.receivers, function(receiver){
-
-          // enumerate only the receivers of the current context
-          if (self.current_context.receivers.indexOf(receiver.id) !== -1) {
+          // enumerate only the receivers of the current context and with pgp keys
+          if (self.current_context.receivers.indexOf(receiver.id) !== -1 && receiver.pgp_glkey_pub) {
             self.current_context_receivers.push(receiver);
 
             if (!self.current_context.show_receivers) {
@@ -432,17 +439,15 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
             self.current_submission.pgp_glkey_pub = tkp.publicKeyArmored;
             self.current_submission.pgp_glkey_priv = tkp.privateKeyArmored;
 
+            console.log('receivers_selected_keys ', self.receivers_selected_keys);
             var receivers_and_wb_keys = [];
             _.each(self.receivers_selected_keys, function(key) {
                 var r_key_pub = openpgp.key.readArmored(key).keys[0];
-                // if the key is not undefined - useful if there are receivers with no glkeys (retro compatibility?)
-                if (key) {
-                  receivers_and_wb_keys.push( r_key_pub );
-                }
+                receivers_and_wb_keys.push( r_key_pub );
             });
             var wb_key_pub = openpgp.key.readArmored( tkp.publicKeyArmored ).keys[0];
             receivers_and_wb_keys.push( wb_key_pub );
-            //console.log(receivers_and_wb_keys);
+            console.log('all the keys ', receivers_and_wb_keys);
 
             var wb_steps = JSON.stringify(self.current_submission.wb_steps);
             //console.log(wb_steps);
@@ -468,8 +473,8 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
     };
 
 }]).
-  factory('Tip', ['$resource', 'Receivers',
-          function($resource, Receivers) {
+  factory('Tip', ['$resource', '$rootScope', 'Receivers', 'ReceiverPreferences',
+          function($resource, $rootScope, Receivers, ReceiverPreferences) {
 
     var tipResource = $resource('/rtip/:tip_id', {tip_id: '@id'}, {update: {method: 'PUT'}});
     var receiversResource = $resource('/rtip/:tip_id/receivers', {tip_id: '@tip_id'}, {});
@@ -481,18 +486,29 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
       forEach = angular.forEach;
 
       self.tip = {};
-      self.privateKey = null;
+
+      ReceiverPreferences.get(function(preferences){
 
       tipResource.get(tipID, function(result){
 
-        //TODO: use private key of logged in receiver
-        //TODO: decrypt private key of logged in receiver
-        self.privateKey = openpgp.key.readArmored( result.pgp_glkey_priv ).keys[0];
+        //console.log( preferences.pgp_glkey_priv );
+        var privateKey = openpgp.key.readArmored( preferences.pgp_glkey_priv ).keys[0];
+        var ret = privateKey.decrypt( $rootScope.receiver_key_passphrase );
+        console.log(ret);
+
         var pgpMessage = openpgp.message.readArmored( result.wb_steps[0] );
+        console.log( pgpMessage );
+        console.log( privateKey );
 
         openpgp.config.show_comment = false;
         openpgp.config.show_version = false;
-        openpgp.decryptMessage(self.privateKey, pgpMessage).then(function(decr_wb_steps) {
+
+        //console.log( privateKey.isDecrypted() );
+        console.log( privateKey.primaryKey.isDecrypted );
+        console.log( pgpMessage.getEncryptionKeyIds() ); 
+
+
+        openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_wb_steps) {
 
         receiversResource.query(tipID, function(receiversCollection){
 
@@ -550,7 +566,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
               if ( message.content.indexOf("-----BEGIN PGP MESSAGE-----") > -1 ) {
                 var pgpMessage = openpgp.message.readArmored( message.content );
-                openpgp.decryptMessage(self.privateKey, pgpMessage).then(function(decr_content) {
+                openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_content) {
                   message.content = decr_content;
                 });
               }
@@ -566,6 +582,8 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         });
 
         }); // openpgp decrypt
+
+      }); // ReceiverPreferences
 
       });
 
@@ -584,17 +602,17 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
     return function(fn) {
       var self = this;
       self.tip = {};
-      self.privateKey = null;
+      privateKey = null;
 
       tipResource.get(function(result) {
 
         //TODO: decrypt key with receipt, now it is in unencrypted
-        self.privateKey = openpgp.key.readArmored( result.pgp_glkey_priv ).keys[0];
+        privateKey = openpgp.key.readArmored( result.pgp_glkey_priv ).keys[0];
         var pgpMessage = openpgp.message.readArmored( result.wb_steps[0] );
 
         openpgp.config.show_comment = false;
         openpgp.config.show_version = false;
-        openpgp.decryptMessage(self.privateKey, pgpMessage).then(function(decr_wb_steps) {
+        openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_wb_steps) {
 
         receiversResource.query(function(receiversCollection) {
 
@@ -651,7 +669,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
                   if ( message.content.indexOf("-----BEGIN PGP MESSAGE-----") > -1 ) {
                     var pgpMessage = openpgp.message.readArmored( message.content );
-                    openpgp.decryptMessage(self.privateKey, pgpMessage).then(function(decr_content) {
+                    openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_content) {
                       message.content = decr_content;
                     });
                   }
