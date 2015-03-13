@@ -170,14 +170,10 @@ def sendmail(authentication_username, authentication_password, from_address,
         factory = ESMTPSenderFactory(
             authentication_username,
             authentication_password,
-
             from_address,
             to_address,
-
             message_file,
-
             esmtp_deferred,
-
             contextFactory=context_factory,
             requireAuthentication=(authentication_username and authentication_password),
             requireTransportSecurity=requireTransportSecurity,
@@ -195,7 +191,7 @@ def sendmail(authentication_username, authentication_password, from_address,
         return fail()
 
     try:
-        if GLSetting.memory_copy.notif_use_tor:
+        if GLSetting.memory_copy.tor_socks_enable:
             socksProxy = TCP4ClientEndpoint(reactor, GLSetting.socks_host, GLSetting.socks_port, timeout=notif_timeout)
             endpoint = SOCKS5ClientEndpoint(smtp_host.encode('utf-8'), smtp_port, socksProxy)
             d = endpoint.connect(factory)
