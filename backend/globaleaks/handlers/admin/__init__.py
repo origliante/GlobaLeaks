@@ -816,11 +816,7 @@ class NodeInstance(BaseHandler):
                                         requests.adminNodeDesc)
 
         node_description = yield update_node(request, True, self.request.language)
-
-        # update 'node' cache calling the 'public' side of /node
-        public_node_desc = yield anon_serialize_node(self.request.language)
-        GLApiCache.invalidate('node')
-        GLApiCache.set('node', self.request.language, public_node_desc)
+        GLApiCache.invalidate()
 
         self.set_status(202) # Updated
         self.finish(node_description)
@@ -860,14 +856,7 @@ class ContextCreate(BaseHandler):
                                         requests.adminContextDesc)
 
         response = yield create_context(request, self.request.language)
-
-        # get the updated list of contexts, and update the cache
-        public_contexts_list = yield get_public_context_list(self.request.language)
-        GLApiCache.invalidate('contexts')
-        GLApiCache.set('contexts', self.request.language, public_contexts_list)
-
-        # contexts update causes also receivers update
-        GLApiCache.invalidate('receivers')
+        GLApiCache.invalidate()
 
         self.set_status(201) # Created
         self.finish(response)
@@ -908,16 +897,7 @@ class ContextInstance(BaseHandler):
                                         requests.adminContextDesc)
 
         response = yield update_context(context_id, request, self.request.language)
-
-        # get the updated list of contexts, and update the cache
-        public_contexts_list = yield get_public_context_list(self.request.language)
-        GLApiCache.invalidate('contexts')
-        GLApiCache.set('contexts', self.request.language, public_contexts_list)
-
-        # contexts update causes also receivers update and
-        # node update due to 'configured' based on context-receiver association
-        GLApiCache.invalidate('receivers')
-        GLApiCache.invalidate('node')
+        GLApiCache.invalidate()
 
         self.set_status(202) # Updated
         self.finish(response)
@@ -934,16 +914,7 @@ class ContextInstance(BaseHandler):
         Errors: InvalidInputFormat, ContextIdNotFound
         """
         yield delete_context(context_id)
-
-        # get the updated list of contexts, and update the cache
-        public_contexts_list = yield get_public_context_list(self.request.language)
-        GLApiCache.invalidate('contexts')
-        GLApiCache.set('contexts', self.request.language, public_contexts_list)
-
-        # contexts update causes also receivers update and
-        # node update due to 'configured' based on context-receiver association
-        GLApiCache.invalidate('receivers')
-        GLApiCache.invalidate('node')
+        GLApiCache.invalidate()
 
         self.set_status(200) # Ok and return no content
         self.finish()
@@ -983,16 +954,7 @@ class ReceiverCreate(BaseHandler):
                                         requests.adminReceiverDesc)
 
         response = yield create_receiver(request, self.request.language)
-
-        # get the updated list of receivers, and update the cache
-        public_receivers_list = yield get_public_receiver_list(self.request.language)
-        GLApiCache.invalidate('receivers')
-        GLApiCache.set('receivers', self.request.language, public_receivers_list)
-
-        # receivers update causes also contexts update and
-        # node update due to 'configured' based on context-receiver association
-        GLApiCache.invalidate('contexts')
-        GLApiCache.invalidate('node')
+        GLApiCache.invalidate()
 
         self.set_status(201) # Created
         self.finish(response)
@@ -1030,16 +992,7 @@ class ReceiverInstance(BaseHandler):
         request = self.validate_message(self.request.body, requests.adminReceiverDesc)
 
         response = yield update_receiver(receiver_id, request, self.request.language)
-
-        # get the updated list of receivers, and update the cache
-        public_receivers_list = yield get_public_receiver_list(self.request.language)
-        GLApiCache.invalidate('receivers')
-        GLApiCache.set('receivers', self.request.language, public_receivers_list)
-
-        # receivers update causes also contexts update and
-        # node update due to 'configured' based on context-receiver association
-        GLApiCache.invalidate('contexts')
-        GLApiCache.invalidate('node')
+        GLApiCache.invalidate()
 
         self.set_status(201)
         self.finish(response)
@@ -1059,12 +1012,7 @@ class ReceiverInstance(BaseHandler):
         yield delete_receiver(receiver_id)
 
         # get the updated list of receivers, and update the cache
-        public_receivers_list = yield get_public_receiver_list(self.request.language)
-        GLApiCache.invalidate('receivers')
-        GLApiCache.set('receivers', self.request.language, public_receivers_list)
-
-        # receivers update causes also contexts update
-        GLApiCache.invalidate('contexts')
+        GLApiCache.invalidate()
 
         self.set_status(200) # OK and return not content
         self.finish()
