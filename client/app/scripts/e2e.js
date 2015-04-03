@@ -29,15 +29,36 @@ angular.module('e2e', []).
       },
 
       gl_password: function(password) {
+        var step = 200;
+        var logN = 11;
+        var r = 8;
+        
+        var ret = scrypt(password, 'password', logN, r, 32, step, function(res) {
+          console.log(res);
+          return res;
+        }, "base64");
+        console.log(ret);
+
+        /*
         var scrypt = scrypt_module_factory(33554432);
         var key = this.scrypt_hash(password, 4096, scrypt);
-        return key;
+        return key;*/
       },
 
       gl_passphrase: function(passphrase) {
+        var step = 200;
+        var logN = 11;
+        var r = 8;
+
+        var ret = scrypt(passphrase, 'passphrase', logN, r, 32, step, function(res) {
+          console.log(res);
+          return res;
+        }, "base64");
+
+        /*
         var scrypt = scrypt_module_factory(33554432);
         var key = this.scrypt_hash(passphrase, 8192, scrypt);
-        return key;
+        return key;*/
       }
     }
   }).
