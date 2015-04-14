@@ -38,8 +38,8 @@
     "jszip": "2.4.0",
     "openpgpjs": "https://github.com/hellais/openpgpjs/archive/feature/deterministic.zip",
     "scrypt": "https://raw.githubusercontent.com/tonyg/js-scrypt/master/browser/scrypt.js",
-    "FileSaver": "git://github.com/eligrey/FileSaver.js.git",
-    "scrypt-async": "https://github.com/dchest/scrypt-async-js.git"
+    "scrypt-async": "https://github.com/dchest/scrypt-async-js.git",
+    "FileSaver": "git://github.com/eligrey/FileSaver.js.git"
   },
   "resolutions": {
     "bootstrap": "3.3.4"

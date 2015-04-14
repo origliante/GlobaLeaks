@@ -1,9 +1,9 @@
 "use strict";
 
 angular.module('resourceServices.authentication', [])
-  .factory('Authentication', ['$http', '$location', '$routeParams',
+  .factory('Authentication', ['$q', '$http', '$location', '$routeParams',
                               '$rootScope', '$timeout', 'pkdf',
-    function($http, $location, $routeParams, $rootScope, $timeout, pkdf) {
+    function($q, $http, $location, $routeParams, $rootScope, $timeout, pkdf) {
       function Session(){
         var self = this;
 
@@ -21,15 +21,42 @@ angular.module('resourceServices.authentication', [])
           }
         };
 
+        $rootScope.ww_gl_password = function(password) {
+            var worker = new Worker('/scripts/login_ww.js');
+            var defer = $q.defer();
+            worker.onmessage = function(e) {
+                defer.resolve(e.data);
+                worker.terminate();
+            };
+            worker.postMessage([password, 4096]);
+            return defer.promise;
+        }
+        $rootScope.ww_gl_passphrase = function(passphrase) {
+            var worker = new Worker('/scripts/login_ww.js');
+            var defer = $q.defer();
+            worker.onmessage = function(e) {
+                defer.resolve(e.data);
+                worker.terminate();
+            };
+            worker.postMessage([passphrase, 8192]);
+            return defer.promise;
+        }
+
         $rootScope.login = function(username, password, role, cb) {
 
           if (role == 'receiver' && password != 'globaleaks') {
-            var pwd = pkdf.gl_password(password);
-            var passphrase = pkdf.gl_passphrase(password);
-            $rootScope.receiver_key_passphrase = passphrase;
-            password = pwd;
+            $rootScope.ww_gl_passphrase(password).then(function(wkReply) {
+              console.log('ww_gl_passphrase wkReply ', wkReply);
+              $rootScope.receiver_key_passphrase = wkReply;
+            });
           }
 
+          $rootScope.ww_gl_password(password).then(function(wkReply) {
+            console.log('ww_gl_password wkReply ', wkReply);
+            if (role == 'receiver' && password != 'globaleaks') {
+              password = wkReply;
+            }
+ 
           return $http.post('/authentication', {'username': username,
                                                 'password': password,
                                                 'role': role})
@@ -67,14 +94,15 @@ angular.module('resourceServices.authentication', [])
 
               if ($routeParams['src']) {
                 $location.path($routeParams['src']);
-
               } else {
                 $location.path(self.auth_landing_page);
               }
 
               $location.search('');
-
           });
+
+        }); // login_ww
+
         };
 
         self.logout_performed = function () {
