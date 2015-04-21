@@ -1,9 +1,7 @@
 <div class="row">
   <div id="ConfigSidebarBox" class="col-md-3" data-ng-include="'views/admin/sidebar.html'"></div>
   <div class="col-md-9">
-    <p>
     <span data-translate>This interface shows user activity on your server. It may be helpful in detecting anomalies and providing support to the receivers using your server.</span>
-    </p>
     <div data-ng-if="users.length">
       <div class="row">
         <div class="col-md-12">
@@ -14,9 +12,7 @@
               </label>
               <div class="col-md-6">
                 <select data-ng-model="search.id" class="form-control">
-                  <option data-ng-repeat="receiver in users" value="{{receiver.id}}">
-                    <span>{{receiver.name}}</span>
-                  </option>
+                  <option data-ng-repeat="receiver in users" value="{{receiver.id}}">{{receiver.name}}</option>
                 </select>
               </div>
             </span>

@@ -31,34 +31,31 @@
           <span class="glyphicon glyphicon-info-sign"></span>
           </a>
         </dt>
-        <br />
         <dt><span data-translate>Submission date</span></dt>
         <dd>{{tip.creation_date | date:'dd-MM-yyyy HH:mm'}}</dd>
-        <br />
         <dt><span data-translate>Expiration Date</span></dt>
         <dd>{{tip.expiration_date | date:'dd-MM-yyyy HH:mm'}}</dd>
       </dl>
-      <div data-ng-repeat="step in tip.wb_steps">
+      <dl data-ng-repeat="step in tip.wb_steps">
         <dt>
           <span data-translate>Step</span>
-          <span>{{$index + 1}}: {{step.label}}<span>
+          <span>{{$index + 1}}: {{step.label}}</span>
         </dt>
         <dd data-ng-include="'views/partials/tip_fields.html'"></dd>
-      </div>
+      </dl>
     </div>
   </div>
 
   <div class="col-md-6">
-    <div class="col-md-12">
-      <h3>{{"Options"}}</h3>
-      <span data-ng-show="tip.postpone_superpower">
-        <button data-ng-click="tip_extend(tip.id)" class="btn btn-sm btn-warning">
+    <div class="col-md-12" data-ng-if="tip.can_postpone_expiration || tip.can_delete_submission">
+      <span data-ng-show="tip.can_postpone_expiration">
+        <button data-ng-click="tip_postpone(tip.id)" class="btn btn-sm btn-warning">
           <i class="glyphicon glyphicon-time"></i>
           <span data-translate>Postpone Tip expiration date</span>
         </button>
       </span>
       <span data-ng-show="tip.can_delete_submission">
-        <button data-ng-click="tip_delete(tip.id, true)" class="btn btn-sm btn-danger">
+        <button data-ng-click="tip_delete(tip.id)" class="btn btn-sm btn-danger">
           <i class="glyphicon glyphicon-trash"></i>
           <span data-translate>Delete Tip</span>
         </button>
@@ -106,7 +103,7 @@
   <h3>
     <span data-translate>Files</span>
   </h3>
-  <div class="well" data-ng-show="tip.files">
+  <div class="well" data-ng-show="tip.files.length">
     <div data-ng-if="tip.collection">
       <form id="fileCollectionDownload" method="POST" action="{{tip.collection}}" novalidate>
         <input type="hidden" name="x-session" value="{{session}}">
@@ -174,9 +171,7 @@
                 <span>{{file.content_type}}</span>
               </td>
               <td>
-                <span>{{file.size}}</span>
-                <span>Bytes</span>
-                <!-- To be fixed properly managing translation and unit change bytes/mbytes/etc -->
+                <span>{{file.size | prettyBytes}}</span>
               </td>
             </tr>
           </tbody>
@@ -185,10 +180,8 @@
     </div>
   </div>
 
-  <div class="col-md-12" data-ng-hide="tip.files">
-    <p>
-      <span data-translate>No files have been uploaded!</span>
-    </p>
+  <div class="col-md-12" data-ng-hide="tip.files.length">
+    <span data-translate>No files have been uploaded!</span>
   </div>
 
 </div>

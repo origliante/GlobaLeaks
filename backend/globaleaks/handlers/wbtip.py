@@ -1,6 +1,6 @@
 # -*- coding: UTF-8
 #
-#   wbtip
+# wbtip
 #   *****
 #
 #   Contains all the logic for handling tip related operations, managed by
@@ -12,7 +12,7 @@ from twisted.internet.defer import inlineCallbacks
 from globaleaks.handlers.base import BaseHandler
 from globaleaks.handlers.authentication import transport_security_check, authenticated
 from globaleaks.rest import requests
-from globaleaks.utils.utility import log, datetime_now, datetime_to_ISO8601, datetime_to_pretty_str
+from globaleaks.utils.utility import log, datetime_now, datetime_to_ISO8601
 from globaleaks.utils.structures import Rosetta
 from globaleaks.settings import transact, transact_ro
 from globaleaks.models import WhistleblowerTip, Comment, Message, ReceiverTip
@@ -35,7 +35,7 @@ def wb_serialize_tip(internaltip, language):
     # context_name and context_description are localized fields
     mo = Rosetta(internaltip.context.localized_strings)
     mo.acquire_storm_object(internaltip.context)
-    for attr in ['name', 'description' ]:
+    for attr in ['name', 'description']:
         key = "context_%s" % attr
         ret_dict[key] = mo.dump_localized_attr(attr, language)
 
@@ -45,9 +45,9 @@ def wb_serialize_tip(internaltip, language):
 def wb_serialize_file(internalfile):
     wb_file_desc = {
         'id': internalfile.id,
-        'name' : internalfile.name,
-        'content_type' : internalfile.content_type,
-        'creation_date' : datetime_to_ISO8601(internalfile.creation_date),
+        'name': internalfile.name,
+        'content_type': internalfile.content_type,
+        'creation_date': datetime_to_ISO8601(internalfile.creation_date),
         'size': internalfile.size,
     }
     return wb_file_desc
@@ -82,12 +82,14 @@ def db_get_internaltip_wb(store, tip_id, language):
 
     return tip_desc
 
+
 @transact
 def get_tip(store, tip_id, language):
     answer = db_get_internaltip_wb(store, tip_id, language)
     answer['files'] = db_get_files_wb(store, tip_id)
 
     return answer
+
 
 class WBTipInstance(BaseHandler):
     """
@@ -118,12 +120,12 @@ class WBTipInstance(BaseHandler):
 
 def wb_serialize_comment(comment):
     comment_desc = {
-        'comment_id' : comment.id,
-        'type' : comment.type,
-        'content' : comment.content,
-        'system_content' : comment.system_content if comment.system_content else {},
-        'author' : comment.author,
-        'creation_date' : datetime_to_ISO8601(comment.creation_date)
+        'comment_id': comment.id,
+        'type': comment.type,
+        'content': comment.content,
+        'system_content': comment.system_content if comment.system_content else {},
+        'author': comment.author,
+        'creation_date': datetime_to_ISO8601(comment.creation_date)
     }
 
     return comment_desc
@@ -190,15 +192,15 @@ class WBTipCommentCollection(BaseHandler):
     @inlineCallbacks
     def post(self):
         """
-        Request: actorsCommentDesc
-        Response: actorsCommentDesc
+        Request: CommentDesc
+        Response: CommentDesc
         Errors: InvalidInputFormat, TipIdNotFound, TipReceiptNotFound
         """
 
-        request = self.validate_message(self.request.body, requests.actorsCommentDesc)
+        request = self.validate_message(self.request.body, requests.CommentDesc)
         answer = yield create_comment_wb(self.current_user.user_id, request)
 
-        self.set_status(201) # Created
+        self.set_status(201)  # Created
         self.finish(answer)
 
 
@@ -229,7 +231,6 @@ def get_receiver_list_wb(store, wb_tip_id, language):
 
         # This part of code is used when receiver tips have still not been created
         for receiver in wb_tip.internaltip.receivers:
-
             # This is the reduced version of Receiver serialization
             receiver_desc = {
                 "name": receiver.name,
@@ -244,7 +245,6 @@ def get_receiver_list_wb(store, wb_tip_id, language):
             localize_and_append_receiver(receiver, receiver_desc)
 
         for rtip in wb_tip.internaltip.receivertips:
-
             message_counter = store.find(Message,
                                          Message.receivertip_id == rtip.id).count()
 
@@ -286,13 +286,14 @@ class WBTipReceiversCollection(BaseHandler):
 
 def wb_serialize_message(msg):
     return {
-        'id' : msg.id,
-        'creation_date' : datetime_to_ISO8601(msg.creation_date),
-        'content' : msg.content,
-        'visualized' : msg.visualized,
-        'type' : msg.type,
-        'author' : msg.author
+        'id': msg.id,
+        'creation_date': datetime_to_ISO8601(msg.creation_date),
+        'content': msg.content,
+        'visualized': msg.visualized,
+        'type': msg.type,
+        'author': msg.author
     }
+
 
 @transact
 def get_messages_content(store, wb_tip_id, receiver_id):
@@ -327,7 +328,6 @@ def get_messages_content(store, wb_tip_id, receiver_id):
 
 @transact
 def create_message_wb(store, wb_tip_id, receiver_id, request):
-
     wb_tip = store.find(WhistleblowerTip,
                         WhistleblowerTip.id == unicode(wb_tip_id)).one()
 
@@ -336,7 +336,7 @@ def create_message_wb(store, wb_tip_id, receiver_id, request):
         raise errors.TipReceiptNotFound
 
     rtip = store.find(ReceiverTip, ReceiverTip.internaltip_id == wb_tip.internaltip.id,
-                                   ReceiverTip.receiver_id == unicode(receiver_id)).one()
+                      ReceiverTip.receiver_id == unicode(receiver_id)).one()
 
     if not rtip:
         log.err("No ReceiverTip found: receiver_id %s itip %s" %
@@ -372,7 +372,6 @@ class WBTipMessageCollection(BaseHandler):
     @authenticated('wb')
     @inlineCallbacks
     def get(self, receiver_id):
-
         messages = yield get_messages_content(self.current_user.user_id, receiver_id)
 
         self.set_status(200)
@@ -382,10 +381,9 @@ class WBTipMessageCollection(BaseHandler):
     @authenticated('wb')
     @inlineCallbacks
     def post(self, receiver_id):
-
-        request = self.validate_message(self.request.body, requests.actorsCommentDesc)
+        request = self.validate_message(self.request.body, requests.CommentDesc)
 
         message = yield create_message_wb(self.current_user.user_id, receiver_id, request)
 
-        self.set_status(201) # Created
+        self.set_status(201)  # Created
         self.finish(message)

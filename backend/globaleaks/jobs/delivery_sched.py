@@ -12,8 +12,8 @@
 import os
 import sys
 
+import os
 from twisted.internet.defer import inlineCallbacks
-
 from globaleaks.jobs.base import GLJob
 from globaleaks.models import InternalFile, InternalTip, ReceiverTip, \
                               ReceiverFile
@@ -22,6 +22,7 @@ from globaleaks.utils.utility import log, datetime_to_ISO8601
 from globaleaks.security import GLBPGP, GLSecureFile
 from globaleaks.handlers.admin import admin_serialize_receiver
 from globaleaks.third_party.rstr import xeger
+
 
 __all__ = ['DeliverySchedule']
 
@@ -58,7 +59,7 @@ def serialize_receiverfile(rfile):
         'internaltip_id' : rfile.internaltip_id,
         'internalfile_id' : rfile.internalfile_id,
         'receiver_id' : rfile.receiver_id,
-        'receiver_tip_id' : rfile.receiver_tip_id,
+        'receivertip_id' : rfile.receivertip_id,
         'file_path' : rfile.file_path,
         'size' : rfile.size,
         'downloads' : rfile.downloads,
@@ -172,7 +173,7 @@ def receiverfile_create(store, if_path, recv_path, status, recv_size, receiver_d
         receiverfile.receiver_id = receiver_desc['id']
         receiverfile.internaltip_id = ifile.internaltip_id
         receiverfile.internalfile_id = ifile.id
-        receiverfile.receiver_tip_id = rtrf.id
+        receiverfile.receivertip_id = rtrf.id
         receiverfile.file_path = unicode(recv_path)
         receiverfile.size = recv_size
         receiverfile.status = unicode(status)

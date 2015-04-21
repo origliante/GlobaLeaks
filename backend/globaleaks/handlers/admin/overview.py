@@ -24,14 +24,14 @@ def collect_tip_overview(store, language):
     all_itips = store.find(models.InternalTip)
     for itip in all_itips:
         tip_description = {
-            "id": itip.id,
-            "creation_date": datetime_to_ISO8601(itip.creation_date),
-            "creation_lifetime": datetime_to_ISO8601(itip.creation_date),
-            "expiration_date": datetime_to_ISO8601(itip.expiration_date),
-            "context_id": itip.context_id,
-            "receivertips": [],
-            "internalfiles": [],
-            "comments": [],
+            'id': itip.id,
+            'creation_date': datetime_to_ISO8601(itip.creation_date),
+            'creation_lifetime': datetime_to_ISO8601(itip.creation_date),
+            'expiration_date': datetime_to_ISO8601(itip.expiration_date),
+            'context_id': itip.context_id,
+            'receivertips': [],
+            'internalfiles': [],
+            'comments': [],
             'wb_access_counter': 0,
             'wb_last_access': u'Never'
         }
@@ -225,7 +225,7 @@ class Tips(BaseHandler):
     def get(self):
         """
         Parameters: None
-        Response: TipsOverviewList
+        Response: TipsOverviewDescList
         Errors: None
         """
         tips_complete_list = yield collect_tip_overview(self.request.language)
@@ -246,7 +246,7 @@ class Users(BaseHandler):
     def get(self):
         """
         Parameters: None
-        Response: UsersOverviewList
+        Response: UsersOverviewDescList
         Errors: None
         """
         users_complete_list = yield collect_users_overview()
@@ -269,7 +269,7 @@ class Files(BaseHandler):
     def get(self):
         """
         Parameters: None
-        Response: FilesOverviewList
+        Response: FilesOverviewDescList
         Errors: None
         """
 

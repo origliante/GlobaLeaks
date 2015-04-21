@@ -16,7 +16,7 @@ function($scope, $modal) {
 
     return $scope.update(updated_receiver, cb);
 
-  }
+  };
 
   $scope.save_all = function () {
     angular.forEach($scope.admin.receivers, function (receiver, key) {
@@ -28,7 +28,7 @@ function($scope, $modal) {
     $scope.admin.receiver['delete']({
       receiver_id: receiver.id
     }, function(){
-      var idx = _.indexOf($scope.admin.receivers, receiver);
+      var idx = $scope.admin.receivers.indexOf(receiver);
       $scope.admin.receivers.splice(idx, 1);
     });
 
@@ -51,30 +51,6 @@ function($scope, $modal) {
        function(result) { }
     );
   };
-
-  $scope.sortableOptions = {
-    stop: function(e, ui) {
-      $scope.update_receivers_order();
-    }
-  };
-
-  $scope.reorder_receivers_alphabetically = function () {
-    $scope.admin.receivers = _($scope.admin.receivers).sortBy(function (receiver) {
-      return receiver.name;
-    });
-
-    $scope.update_receivers_order();
-
-    $scope.save_all();
-  };
-
-  $scope.update_receivers_order = function() {
-    var i = 0;
-    angular.forEach($scope.admin.receivers, function(receiver, key) {
-        receiver.presentation_order = i + 1;
-        i += 1;
-    });
-  }
 
 }]);
 
@@ -106,10 +82,16 @@ GLClient.controller('AdminReceiversEditorCtrl', ['$scope', 'passwordWatcher', 'C
       $scope.editReceiver.$pristine = false;
     };
 
+    $scope.updateReceiverImgUrl = function() {
+      $scope.receiverImgUrl = "/static/" + $scope.receiver.id + ".png?" + $scope.randomFluff();
+    }
+
+    $scope.updateReceiverImgUrl();
+
 }]);
 
-GLClient.controller('AdminReceiverAddCtrl', ['$scope', 'passwordWatcher',
-  function($scope, passwordWatcher) {
+GLClient.controller('AdminReceiverAddCtrl', ['$scope',
+  function($scope) {
 
     $scope.new_receiver = {};
 

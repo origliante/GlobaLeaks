@@ -11,7 +11,7 @@
 
 """
 
-from storm.locals import Int, Bool, Unicode, DateTime, JSON, ReferenceSet
+from storm.locals import Int, Bool, Unicode, DateTime, JSON
 from globaleaks.db.base_updater import TableReplacer
 from globaleaks.db.datainit import load_appdata
 from globaleaks.models import Model
@@ -189,18 +189,54 @@ class Receiver_v_19(Model):
     presentation_order = Int()
 
 
+class Context_v_19(Model):
+    __storm_table__ = 'context'
+    show_small_cards = Bool()
+    show_receivers = Bool()
+    maximum_selectable_receivers = Int()
+    select_all_receivers = Bool()
+    enable_private_messages = Bool()
+    tip_timetolive = Int()
+    last_update = DateTime()
+    name = JSON()
+    description = JSON()
+    receiver_introduction = JSON()
+    postpone_superpower = Bool()
+    can_delete_submission = Bool()
+    presentation_order = Int()
+
+
 class Replacer1920(TableReplacer):
 
     def migrate_Node(self):
         print "%s Node migration assistant: disable_key_code_hint" % self.std_fancy
+
+        appdata_dict = load_appdata()
 
         old_node = self.store_old.find(self.get_right_model("Node", 19)).one()
         new_node = self.get_right_model("Node", 20)()
 
         for _, v in new_node._storm_columns.iteritems():
 
+            if v.name == 'can_postpone_expiration':
+                old_attr = 'postpone_superpower'
+                setattr(new_node, v.name, getattr(old_node, old_attr))
+                continue
+
+            if v.name == 'context_selector_label':
+                # check needed to preserve funtionality if appdata will be altered in the future
+                if v.name in appdata_dict['node']:
+                    new_node.context_selector_label = appdata_dict['node']['context_selector_label']
+                else:
+                    new_node.context_selector_label = every_language("")
+                continue
+
             if v.name == 'disable_key_code_hint':
                 new_node.disable_key_code_hint = False
+                continue
+
+            if v.name == 'show_contexts_in_alphabetical_order':
+                new_node.show_contexts_in_alphabetical_order = False
                 continue
 
             setattr(new_node, v.name, getattr(old_node, v.name))
@@ -219,7 +255,7 @@ class Replacer1920(TableReplacer):
         for _, v in new_notification._storm_columns.iteritems():
 
             if v.name == 'send_email_for_every_event':
-                new_notification.send_email_for_every_event = False
+                new_notification.send_email_for_every_event = True
                 continue
 
             if v.name == 'torify':
@@ -242,20 +278,20 @@ class Replacer1920(TableReplacer):
                     new_notification.notification_digest_mail_title = every_language("")
                 continue
 
-            if v.name == 'upcoming_tip_expiration_mail_title':
+            if v.name == 'tip_expiration_mail_title':
                 # check needed to preserve funtionality if templates will be altered in the future
                 if v.name in appdata_dict['templates']:
-                    new_notification.upcoming_tip_expiration_mail_title = appdata_dict['templates'][v.name]
+                    new_notification.tip_expiration_mail_title = appdata_dict['templates'][v.name]
                 else:
-                    new_notification.upcoming_tip_expiration_mail_title = every_language("")
+                    new_notification.tip_expiration_mail_title = every_language("")
                 continue
 
-            if v.name == 'upcoming_tip_expiration_template':
+            if v.name == 'tip_expiration_template':
                 # check needed to preserve funtionality if templates will be altered in the future
                 if v.name in appdata_dict['templates']:
-                    new_notification.upcoming_tip_expiration_template = appdata_dict['templates'][v.name]
+                    new_notification.tip_expiration_template = appdata_dict['templates'][v.name]
                 else:
-                    new_notification.upcoming_tip_expiration_template = every_language("")
+                    new_notification.tip_expiration_template = every_language("")
                 continue
 
             setattr(new_notification, v.name, getattr(old_notification, v.name) )
@@ -387,6 +423,37 @@ class Replacer1920(TableReplacer):
                     new_obj.new = False
                     continue
 
+                if v.name == 'receivertip_id':
+                    old_attr = 'receiver_tip_id'
+                    setattr(new_obj, v.name, getattr(old_obj, old_attr))
+                    continue
+
+                setattr(new_obj, v.name, getattr(old_obj, v.name))
+
+            self.store_new.add(new_obj)
+
+        self.store_new.commit()
+
+    def migrate_Context(self):
+        print "%s Context migration assistant: removed receiver_introduction" % self.std_fancy
+
+        old_objs = self.store_old.find(self.get_right_model("Context", 19))
+
+        for old_obj in old_objs:
+
+            new_obj = self.get_right_model("Context", 20)()
+
+            for _, v in new_obj._storm_columns.iteritems():
+
+                if v.name == 'can_postpone_expiration':
+                    old_attr = 'postpone_superpower'
+                    setattr(new_obj, v.name, getattr(old_obj, old_attr))
+                    continue
+
+                if v.name == 'show_receivers_in_alphabetical_order':
+                    new_obj.show_receivers_in_alphabetical_order = False
+                    continue
+
                 setattr(new_obj, v.name, getattr(old_obj, v.name))
 
             self.store_new.add(new_obj)
@@ -403,6 +470,11 @@ class Replacer1920(TableReplacer):
             new_obj = self.get_right_model("Receiver", 20)()
 
             for _, v in new_obj._storm_columns.iteritems():
+
+                if v.name == 'can_postpone_expiration':
+                    old_attr = 'postpone_superpower'
+                    setattr(new_obj, v.name, getattr(old_obj, old_attr))
+                    continue
 
                 if v.name == 'pgp_key_public':
                     old_attr = 'gpg_key_armor'

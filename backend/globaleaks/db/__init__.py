@@ -1,22 +1,23 @@
 # -*- coding: UTF-8
-#   GLBackend Database
-#   ******************
+# GLBackend Database
+# ******************
 from __future__ import with_statement
-import os
 import sys
 import traceback
 
+import os
 from twisted.internet.defer import succeed, inlineCallbacks
 from storm.exceptions import OperationalError
-
 from globaleaks.utils.utility import log
 from globaleaks.settings import transact, transact_ro, GLSetting
 from globaleaks import models
 from globaleaks.db import updater_manager, base_updater
 
+
 base_updater.TableReplacer.testing = True
 
 from globaleaks.db.datainit import load_appdata, init_appdata, init_db
+
 
 def init_models():
     for model in models.models:
@@ -38,7 +39,7 @@ def create_tables_transaction(store):
         create_queries = ''.join(f.readlines()).split(';')
         for create_query in create_queries:
             try:
-                store.execute(create_query+';')
+                store.execute(create_query + ';')
             except OperationalError as exc:
                 log.err("OperationalError in [%s]" % create_query)
                 log.err(exc)
@@ -46,6 +47,7 @@ def create_tables_transaction(store):
     init_models()
     # new is the only Models function executed without @transact, call .add, but
     # the called has to .commit and .close, operations commonly performed by decorator
+
 
 def create_tables(create_node=True):
     appdata_dict = load_appdata()
@@ -61,23 +63,22 @@ def create_tables(create_node=True):
         ret.addCallback(init_appdata, appdata_dict)
         return ret
 
-
     deferred = create_tables_transaction()
     deferred.addCallback(init_appdata, appdata_dict)
 
     if create_node:
-
         log.debug("Node initialization with defaults values")
 
         node_dict = {
-            'name':  u"",
-            'description': dict({ GLSetting.defaults.language: u"" }),
-            'presentation': dict({ GLSetting.defaults.language: u"" }),
-            'footer': dict({ GLSetting.defaults.language: u"" }),
-            'security_awareness_title': dict({ GLSetting.defaults.language: u"" }),
-            'security_awareness_text': dict({ GLSetting.defaults.language: u"" }),
-            'whistleblowing_question': dict({ GLSetting.defaults.language: u"" }),
-            'whistleblowing_button': dict({ GLSetting.defaults.language: u"" }),
+            'name': u"",
+            'description': dict({GLSetting.defaults.language: u""}),
+            'presentation': dict({GLSetting.defaults.language: u""}),
+            'footer': dict({GLSetting.defaults.language: u""}),
+            'context_selector_label': dict({GLSetting.defaults.language: u""}),
+            'security_awareness_title': dict({GLSetting.defaults.language: u""}),
+            'security_awareness_text': dict({GLSetting.defaults.language: u""}),
+            'whistleblowing_question': dict({GLSetting.defaults.language: u""}),
+            'whistleblowing_button': dict({GLSetting.defaults.language: u""}),
             'hidden_service': u"",
             'public_site': u"",
             'email': u"",
@@ -90,16 +91,16 @@ def create_tables(create_node=True):
             'tor2web_submission': GLSetting.defaults.tor2web_submission,
             'tor2web_receiver': GLSetting.defaults.tor2web_receiver,
             'tor2web_unauth': GLSetting.defaults.tor2web_unauth,
-            'postpone_superpower': False, # disabled by default
-            'can_delete_submission': False, # disabled too
-            'ahmia': False, # disabled too
+            'can_postpone_expiration': False,  # disabled by default
+            'can_delete_submission': False,  # disabled too
+            'ahmia': False,  # disabled too
             'allow_unencrypted': GLSetting.defaults.allow_unencrypted,
             'allow_iframes_inclusion': GLSetting.defaults.allow_iframes_inclusion,
-            'exception_email' : GLSetting.defaults.exception_email,
+            'exception_email': GLSetting.defaults.exception_email,
             'default_language': GLSetting.defaults.language,
-            'default_timezone' : GLSetting.defaults.timezone,
-            'admin_language' : GLSetting.defaults.language,
-            'admin_timezone' : GLSetting.defaults.timezone,
+            'default_timezone': GLSetting.defaults.timezone,
+            'admin_language': GLSetting.defaults.language,
+            'admin_timezone': GLSetting.defaults.timezone,
             'disable_privacy_badge': False,
             'disable_security_awareness_badge': False,
             'disable_security_awareness_questions': False,
@@ -113,6 +114,7 @@ def create_tables(create_node=True):
             'landing_page': GLSetting.defaults.landing_page,
             'file_encryption_e2e': True,
             'submission_data_e2e': True,
+            'show_contexts_in_alphabetical_order': False
         }
 
         # Initialize the node and notification tables
@@ -122,7 +124,6 @@ def create_tables(create_node=True):
 
 
 def find_current_db_version(dirpath, filearray):
-
     glbackend_file_present = 0
     for single_file in filearray:
 
@@ -159,9 +160,10 @@ def find_current_db_version(dirpath, filearray):
                 detected_version = 0
             else:
                 detected_version = int(
-                    abspath[nameindex+len('glbackend-'):extensindex])
+                    abspath[nameindex + len('glbackend-'):extensindex])
 
             return detected_version, abspath
+
 
 def check_db_files():
     """
@@ -173,7 +175,7 @@ def check_db_files():
             starting_ver, abspath = find_current_db_version(path, files)
 
             if starting_ver < GLSetting.db_version:
-                print "Performing update of Database from version %d to version %d" %\
+                print "Performing update of Database from version %d to version %d" % \
                       (starting_ver, GLSetting.db_version)
                 try:
                     updater_manager.perform_version_update(starting_ver, GLSetting.db_version, abspath)
@@ -193,6 +195,7 @@ def check_db_files():
         except StandardError:
             continue
 
+
 @transact_ro
 def get_tracked_files(store):
     """
@@ -206,6 +209,7 @@ def get_tracked_files(store):
         tracked_files.append(os.path.basename(files))
 
     return tracked_files
+
 
 @inlineCallbacks
 def clean_untracked_files(res):

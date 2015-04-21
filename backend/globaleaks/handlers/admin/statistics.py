@@ -7,10 +7,9 @@
 # exposed API.
 
 import operator
+
 from twisted.internet.defer import inlineCallbacks
 from storm.expr import Desc, And
-
-from globaleaks.rest import errors, requests
 from globaleaks.settings import transact_ro, transact
 from globaleaks.handlers.base import BaseHandler
 from globaleaks.handlers.authentication import transport_security_check, \
@@ -21,6 +20,7 @@ from globaleaks.utils.utility import datetime_to_ISO8601, datetime_now, \
     utc_past_date, iso_to_gregorian, log
 from globaleaks.anomaly import EventTrackQueue, outcoming_event_monitored
 
+
 def weekmap_to_heatmap(week_map):
     """
     convert a list of list with dict inside, in a flat list
@@ -29,9 +29,6 @@ def weekmap_to_heatmap(week_map):
     for weekday_n, weekday in enumerate(week_map):
         assert (weekday_n >= 0 and weekday_n <= 6), weekday_n
         for hour_n, hourinfo in enumerate(weekday):
-            assert (hour_n >= 0 and hour_n <= 23), hour_n
-            assert isinstance(hourinfo, dict), "Is not a dict in %d %d" % \
-                                               (weekday_n, hour_n)
             retlist.append(hourinfo)
 
     return retlist
@@ -197,7 +194,7 @@ def delete_anomaly_history(store):
     log.info("Anomalies collection removal completed.")
 
 
-class AnomaliesCollection(BaseHandler):
+class AnomaliesCollectionDesc(BaseHandler):
     """
     This Handler returns the list of the triggered anomalies based on
     activity monitored in a timedelta (is considered anomalous if they
@@ -240,7 +237,7 @@ class AnomalyHistoryCollection(BaseHandler):
         self.finish([])
 
 
-class StatsCollection(BaseHandler):
+class StatsCollectionDesc(BaseHandler):
     """
     This Handler returns the list of the stats, stats is the aggregated
     amount of activities recorded in the delta defined in GLSettings

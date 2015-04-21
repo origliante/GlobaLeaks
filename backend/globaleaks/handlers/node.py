@@ -61,50 +61,45 @@ def anon_serialize_node(store, language):
     node = store.find(models.Node).one()
 
     # Contexts and Receivers relationship
-    associated = store.find(models.ReceiverContext).count()
+    configured = store.find(models.ReceiverContext).count() > 0
 
     ret_dict = {
-        'name': node.name,
-        'hidden_service': node.hidden_service,
-        'public_site': node.public_site,
-        'email': u"",
-        'languages_enabled': node.languages_enabled,
-        'languages_supported': LANGUAGES_SUPPORTED,
-        'default_language' : node.default_language,
-        'default_timezone' : node.default_timezone,
-        # extended settings info:
-        'maximum_namesize': node.maximum_namesize,
-        'maximum_textsize': node.maximum_textsize,
-        'maximum_filesize': node.maximum_filesize,
-        # public serialization use GLSetting memory var, and
-        # not the real one, because needs to bypass
-        # Tor2Web unsafe deny default settings
-        'tor2web_admin': GLSetting.memory_copy.tor2web_admin,
-        'tor2web_submission': GLSetting.memory_copy.tor2web_submission,
-        'tor2web_receiver': GLSetting.memory_copy.tor2web_receiver,
-        'tor2web_unauth': GLSetting.memory_copy.tor2web_unauth,
-        'ahmia': node.ahmia,
-        'postpone_superpower': node.postpone_superpower,
-        'can_delete_submission': node.can_delete_submission,
-        'wizard_done': node.wizard_done,
-        'allow_unencrypted': node.allow_unencrypted,
-        'allow_iframes_inclusion': node.allow_iframes_inclusion,
-        'configured': True if associated else False,
-        'password': u"",
-        'old_password': u"",
-        'disable_privacy_badge': node.disable_privacy_badge,
-        'disable_security_awareness_badge': node.disable_security_awareness_badge,
-        'disable_security_awareness_questions': node.disable_security_awareness_questions,
-        'disable_key_code_hint': node.disable_key_code_hint,
-        'enable_custom_privacy_badge': node.enable_custom_privacy_badge,
-        'custom_privacy_badge_tor': node.custom_privacy_badge_tor,
-        'custom_privacy_badge_none': node.custom_privacy_badge_none,
-        'landing_page': node.landing_page,
-        'disk_availability': GLSetting.memory_copy.disk_availability,
-        # These changes value when all the Receiver has PGP key:
-        'file_encryption_e2e' : node.file_encryption_e2e,
-        'submission_data_e2e' : node.submission_data_e2e,
-        # TO BE REVIEW -- EEE
+      'name': node.name,
+      'hidden_service': node.hidden_service,
+      'public_site': node.public_site,
+      'email': u'',
+      'languages_enabled': node.languages_enabled,
+      'languages_supported': LANGUAGES_SUPPORTED,
+      'default_language' : node.default_language,
+      'default_timezone' : node.default_timezone,
+      'maximum_namesize': node.maximum_namesize,
+      'maximum_textsize': node.maximum_textsize,
+      'maximum_filesize': node.maximum_filesize,
+      'tor2web_admin': GLSetting.memory_copy.tor2web_admin,
+      'tor2web_submission': GLSetting.memory_copy.tor2web_submission,
+      'tor2web_receiver': GLSetting.memory_copy.tor2web_receiver,
+      'tor2web_unauth': GLSetting.memory_copy.tor2web_unauth,
+      'ahmia': node.ahmia,
+      'can_postpone_expiration': node.can_postpone_expiration,
+      'can_delete_submission': node.can_delete_submission,
+      'wizard_done': node.wizard_done,
+      'allow_unencrypted': node.allow_unencrypted,
+      'allow_iframes_inclusion': node.allow_iframes_inclusion,
+      'configured': configured,
+      'password': u'',
+      'old_password': u'',
+      'disable_privacy_badge': node.disable_privacy_badge,
+      'disable_security_awareness_badge': node.disable_security_awareness_badge,
+      'disable_security_awareness_questions': node.disable_security_awareness_questions,
+      'disable_key_code_hint': node.disable_key_code_hint,
+      'enable_custom_privacy_badge': node.enable_custom_privacy_badge,
+      'landing_page': node.landing_page,
+      'show_contexts_in_alphabetical_order': node.show_contexts_in_alphabetical_order,
+      'disk_availability': GLSetting.memory_copy.disk_availability,
+	  # These changes value when all the Receiver has PGP key:
+      'file_encryption_e2e' : node.file_encryption_e2e,
+      'submission_data_e2e' : node.submission_data_e2e,
+      # EEE
     }
 
     return get_localized_values(ret_dict, node, node.localized_strings, language)
@@ -126,18 +121,19 @@ def anon_serialize_context(store, context, language):
               for s in context.steps.order_by(models.Step.number) ]
 
     ret_dict = {
-        "id": context.id,
-        "tip_timetolive": context.tip_timetolive,
-        "submission_introduction": u'NYI', # unicode(context.submission_introduction), # optlang
-        "submission_disclaimer": u'NYI', # unicode(context.submission_disclaimer), # optlang
-        "select_all_receivers": context.select_all_receivers,
-        "maximum_selectable_receivers": context.maximum_selectable_receivers,
-        "show_small_cards": context.show_small_cards,
-        "show_receivers": context.show_receivers,
-        "enable_private_messages": context.enable_private_messages,
-        "presentation_order": context.presentation_order,
-        "receivers": receivers,
-        "steps": steps
+        'id': context.id,
+        'tip_timetolive': context.tip_timetolive,
+        'submission_introduction': u'NYI', # unicode(context.submission_introduction), # optlang
+        'submission_disclaimer': u'NYI', # unicode(context.submission_disclaimer), # optlang
+        'select_all_receivers': context.select_all_receivers,
+        'maximum_selectable_receivers': context.maximum_selectable_receivers,
+        'show_small_cards': context.show_small_cards,
+        'show_receivers': context.show_receivers,
+        'enable_private_messages': context.enable_private_messages,
+        'presentation_order': context.presentation_order,
+        'show_receivers_in_alphabetical_order': context.show_receivers_in_alphabetical_order,
+        'receivers': receivers,
+        'steps': steps
     }
 
     return get_localized_values(ret_dict, context, context.localized_strings, language)

@@ -177,14 +177,13 @@ class TableReplacer(object):
                 msg = 'Expecting a table with {} statuses ({})'.format(length, k)
                 raise TypeError(msg)
 
-
         log.msg('{} Opening old DB: {}'.format(self.debug_info, old_db_file))
-        old_database = create_database('sqlite:'+self.old_db_file)
+        old_database = create_database('sqlite:' + self.old_db_file)
         self.store_old = Store(old_database)
 
         GLSetting.db_file = new_db_file
 
-        new_database = create_database('sqlite:'+new_db_file)
+        new_database = create_database('sqlite:' + new_db_file)
         self.store_new = Store(new_database)
 
         if self.start_ver + 1 == DATABASE_VERSION:
@@ -198,7 +197,7 @@ class TableReplacer(object):
                 create_queries = ''.join(f).split(';')
                 for create_query in create_queries:
                     try:
-                        self.store_new.execute(create_query+';')
+                        self.store_new.execute(create_query + ';')
                     except OperationalError:
                         log.msg('OperationalError in "{}"'.format(create_query))
             self.store_new.commit()
@@ -213,7 +212,7 @@ class TableReplacer(object):
                 continue
 
             try:
-                self.store_new.execute(create_query+';')
+                self.store_new.execute(create_query + ';')
             except OperationalError as excep:
                 log.msg('{} OperationalError in [{}]'.format(self.debug_info, create_query))
                 raise excep
@@ -239,7 +238,7 @@ class TableReplacer(object):
                 __file__, table_name, self.start_ver)
             raise NotImplementedError(msg)
 
-        if version >  DATABASE_VERSION:
+        if version > DATABASE_VERSION:
             raise ValueError('Version supplied must be less or equal to {}'.format(
                 DATABASE_VERSION))
 
@@ -284,7 +283,7 @@ class TableReplacer(object):
 
             # Storm internals simply reversed
             for _, v in new_obj._storm_columns.iteritems():
-                setattr(new_obj, v.name, getattr(old_obj, v.name) )
+                setattr(new_obj, v.name, getattr(old_obj, v.name))
 
             self.store_new.add(new_obj)
 
@@ -298,7 +297,7 @@ class TableReplacer(object):
 
         # Storm internals simply reversed
         for _, v in new_obj._storm_columns.iteritems():
-            setattr(new_obj, v.name, getattr(old_obj, v.name) )
+            setattr(new_obj, v.name, getattr(old_obj, v.name))
 
         self.store_new.add(new_obj)
         self.store_new.commit()
@@ -426,8 +425,9 @@ class TableReplacer(object):
     def migrate_EventLogs(self):
         """
         has been created between 15 and 16!
+        should be dropped befor 20
         """
-        if self.start_ver < 16:
+        if self.start_ver < 20:
             return
 
         self._perform_copy_list("EventLogs")

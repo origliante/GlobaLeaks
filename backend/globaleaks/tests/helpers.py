@@ -6,14 +6,16 @@ from __future__ import with_statement
 
 import copy
 import json
+
 import os
 from cyclone import httpserver
 from cyclone.web import Application
 from storm.twisted.testing import FakeThreadPool
 from twisted.internet import threads, defer, task
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 from twisted.trial import unittest
 from twisted.test import proto_helpers
+
 
 # Monkeypathing for unit testing  in order to
 # prevent mail activities
@@ -25,7 +27,7 @@ mailutils.sendmail = sendmail_mock
 from globaleaks import db, models, security, anomaly
 from globaleaks.db.datainit import load_appdata, import_memory_variables
 from globaleaks.handlers import files, rtip, wbtip, authentication
-from globaleaks.handlers.base import GLApiCache, GLHTTPConnection
+from globaleaks.handlers.base import GLApiCache, GLHTTPConnection, BaseHandler
 from globaleaks.handlers.admin import create_context, get_context, update_context, create_receiver, db_get_context_steps
 from globaleaks.handlers.admin.field import create_field
 from globaleaks.handlers.rtip import receiver_serialize_tip
@@ -36,7 +38,7 @@ from globaleaks.models import db_forge_obj, ReceiverTip, ReceiverFile, Whistlebl
 from globaleaks.settings import GLSetting, transact, transact_ro
 from globaleaks.security import GLSecureTemporaryFile
 from globaleaks.third_party import rstr
-from globaleaks.utils import tempobj, token
+from globaleaks.utils import token
 from globaleaks.utils.token import Token
 from globaleaks.utils.utility import datetime_null, log
 
@@ -108,6 +110,11 @@ def import_fixture(store, fixture):
             db_forge_obj(store, mock_class, mock['fields'])
 
 
+def get_file_upload(self):
+    return self.request.body
+
+BaseHandler.get_file_upload = get_file_upload
+
 class TestGL(unittest.TestCase):
 
     encryption_scenario = 'MIXED' # receivers with pgp and receivers without pgp
@@ -167,6 +174,9 @@ class TestGL(unittest.TestCase):
         elif self.encryption_scenario == 'ALL_ENCRYPTED':
             self.dummyReceiver_1['pgp_key_public'] = VALID_PGP_KEY1
             self.dummyReceiver_2['pgp_key_public'] = VALID_PGP_KEY2
+        elif self.encryption_scenario == 'ONE_VALID_ONE_EXPIRED':
+            self.dummyReceiver_1['pgp_key_public'] = VALID_PGP_KEY1
+            self.dummyReceiver_2['pgp_key_public'] = EXPIRED_PGP_KEY
         elif self.encryption_scenario == 'ALL_PLAINTEXT':
             self.dummyReceiver_1['pgp_key_public'] = None
             self.dummyReceiver_2['pgp_key_public'] = None
@@ -356,7 +366,7 @@ class TestGL(unittest.TestCase):
     @transact_ro
     def get_rfiles(self, store, rtip_id):
         rfiles_desc = []
-        rfiles = store.find(ReceiverFile, ReceiverFile.receiver_tip_id == rtip_id)
+        rfiles = store.find(ReceiverFile, ReceiverFile.receivertip_id == rtip_id)
         for rfile in rfiles:
             rfiles_desc.append({'rfile_id': rfile.id})
 
@@ -645,7 +655,7 @@ class MockDict():
             'mail_address': self.dummyReceiverUser['username'],
             'ping_mail_address': 'giovanni.pellerano@evilaliv3.org',
             'can_delete_submission': True,
-            'postpone_superpower': True,
+            'can_postpone_expiration': True,
             'contexts' : [],
             'tip_notification': True,
             'ping_notification': True,
@@ -810,13 +820,14 @@ class MockDict():
             'tip_timetolive': 20,
             'receivers' : [],
             'receiver_introduction': u'These are our receivers',
-            'postpone_superpower': False,
+            'can_postpone_expiration': False,
             'can_delete_submission': False,
             'maximum_selectable_receivers': 0,
             'show_small_cards': False,
             'show_receivers': False,
             'enable_private_messages': True,
             'presentation_order': 0,
+            'show_receivers_in_alphabetical_order': False
         }
 
         self.dummySubmission = {
@@ -841,7 +852,6 @@ class MockDict():
             'email':  u"email@dummy.net",
             'languages_supported': [], # ignored
             'languages_enabled':  [ "it" , "en" ],
-            'default_language': 'en',
             'password': '',
             'old_password': '',
             'salt': 'OMG!, the Rains of Castamere ;( ;(',
@@ -853,7 +863,7 @@ class MockDict():
             'tor2web_submission': True,
             'tor2web_receiver': True,
             'tor2web_unauth': True,
-            'postpone_superpower': False,
+            'can_postpone_expiration': False,
             'can_delete_submission': False,
             'exception_email': GLSetting.defaults.exception_email,
             'ahmia': False,
@@ -879,7 +889,9 @@ class MockDict():
             'header_title_homepage': u'',
             'header_title_submissionpage': u'',
             'header_title_receiptpage': u'',
-            'landing_page': u'homepage'
+            'landing_page': u'homepage',
+            'context_selector_label': u'',
+            'show_contexts_in_alphabetical_order': False
         }
 
 

@@ -6,17 +6,16 @@
 #   Implements a GlobaLeaks security token, to prevent resources exhaustion
 #   operation by anonymous user.
 
-import base64
-import os
-from StringIO import StringIO
 from random import randint
 from datetime import datetime, timedelta
 
+import os
 from globaleaks.utils.utility import log, datetime_now, datetime_to_ISO8601
 from globaleaks.third_party import rstr
 from globaleaks.rest import errors
 from globaleaks.utils.tempobj import TempObj
 from globaleaks.settings import GLSetting
+
 
 # needed in order to allow UT override
 reactor_override = None
@@ -124,8 +123,7 @@ class Token(TempObj):
             if getattr(self, a):
                 test_desc = "%s[H:%s]" % (test_desc,  getattr(self, a)['question'])
 
-        token_string = "Token %s with %s" % (self.kind,
-                                             test_desc if len(test_desc) else "no test description")
+        token_string = "Token %s for %s [%s]" % (self.token_id, self.kind, test_desc)
 
         return token_string
 

@@ -38,11 +38,7 @@ GLClient.controller('FormBuilderCtrl',
   };
 
   $scope.deleteField = function(field) {
-    $rootScope.fieldsToEdit.pop(field);
-  };
-
-  $scope.splice = function(field, fields) {
-    fields.splice(fields.indexOf(field), 1);
+    $rootScope.fieldsToEdit.splice($rootScope.fieldsToEdit.indexOf(field), 1);
   };
 
   $scope.addOption = function() {
@@ -53,8 +49,9 @@ GLClient.controller('FormBuilderCtrl',
   };
 
   $scope.typeSwitch = function (type) {
-    if (_.indexOf(['checkbox', 'selectbox'], type) !== -1)
+    if (['checkbox', 'selectbox'].indexOf(type) !== -1) {
       return 'checkbox_or_selectbox';
+    }
     return type;
   };
 

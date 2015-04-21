@@ -16,7 +16,7 @@ body {
   color: #FFF;
   background: #428bca;
   border-bottom: 1px solid #357ebd;
-  padding: 15px;
+  padding: 30px 15px 30px 15px;
 }
 
 #HeaderBox:after, #HeaderBox:after, #HeaderBoxHompage:after, #HeaderBoxHomepage:after {
@@ -27,10 +27,6 @@ body {
 
 #HeaderBox p, #HeaderBoxHomepage p {
   margin-bottom: 20px;
-}
-
-#HeaderBox .navbar, #HeaderBoxHomepage .navbar {
-  display: none;
 }
 
 #ContentBox {
@@ -142,10 +138,6 @@ h3 {
   text-align: left;
 }
 
-#PrivacyBadgeBoxCloseButton {
-  text-align: right;
-}
-
 .preformatted {
   white-space: pre-wrap;
 }
@@ -188,6 +180,9 @@ table {
 .img-thumbnail {
   position: relative;
   width: 160px;
+  min-width: 160px;
+  min-height: 160px;
+  z-index: 0;
 }
 
 #titleboxdefault {
@@ -202,14 +197,8 @@ table {
 .wizard-block {
   position: relative;
   padding: 45px 15px 15px;
-  margin: 0 -15px 15px;
-  box-shadow: inset 0 3px 6px rgba(0,0,0,.05);
-  border-color: #e5e5e5 #eee #eee;
-  border-style: solid;
-  margin-left: 0;
-  margin-right: 0;
-  border-width: 1px;
-  border-color: #ddd;
+  margin: 0 0 15px;
+  border: 1px solid #ddd;
   border-radius: 4px 4px 0 0;
   box-shadow: none;
 }
@@ -239,12 +228,12 @@ table {
   text-align: left;
 }
 
-.LoginErroBoxHomepage {
+.LoginErrorBoxHomepage {
   text-align: center;
 }
 
 .LoginErrorBox .alert {
-  margin: 0px;
+  margin: 0;
 }
 
 .keyinput {
@@ -295,4 +284,31 @@ input, textarea, select {
 /** Fields submission/tip page **/
 .nested {
   padding-left: 15px;
+}
+
+.preview {
+  width: 100%;
+  height: 100%;
+}
+
+.fileUploadBox {
+  margin-bottom: 10px;
+}
+
+.fileUploadProgress {
+  padding-top: 100px;
+  position: absolute;
+  top: 0;
+  z-index: 100;
+  height: 120px;
+  width: 120px;
+}
+
+.fileUploadProgressOverlay {
+  background-color: black;
+  opacity: 0.3;
+  height: 120px;
+  width: 120px;
+  position: absolute;
+  top: 0;
 }

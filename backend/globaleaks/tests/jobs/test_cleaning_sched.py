@@ -1,22 +1,15 @@
 # -*- encoding: utf-8 -*-
 import os
 
-import copy
-
-from twisted.internet import threads
 from twisted.internet.defer import inlineCallbacks
 
 from globaleaks.tests import helpers
 
 from globaleaks import models
-from globaleaks.rest import requests
-from globaleaks.handlers import base, admin, submission, files, rtip, receiver
-from globaleaks.jobs import delivery_sched, cleaning_sched
-from globaleaks.utils.token import Token
+from globaleaks.handlers import admin, rtip, receiver
+from globaleaks.jobs import cleaning_sched
 from globaleaks.utils.utility import is_expired, datetime_null
 from globaleaks.settings import transact, GLSetting
-
-from globaleaks.security import GLSecureTemporaryFile
 
 
 class TestCleaning(helpers.TestGLWithPopulatedDB):
@@ -57,7 +50,7 @@ class TipCleaning(TestCleaning):
     def postpone_tip_expiration(self):
         recv_desc = yield admin.get_receiver_list('en')
         self.assertEqual(len(recv_desc), 2)
-        rtip_desc = yield receiver.get_receiver_tip_list(recv_desc[0]['id'], 'en')
+        rtip_desc = yield receiver.get_receivertip_list(recv_desc[0]['id'], 'en')
         self.assertEqual(len(rtip_desc), 1)
         tip_list = yield cleaning_sched.get_tip_timings(False)
         self.assertEqual(len(tip_list), 1)

@@ -52,7 +52,7 @@ GLClient.controller('QuizCtrl', ['$scope', '$modalInstance', '$location',
       $modalInstance.close();
       $location.path("/submission");
     }
-  }
+  };
 
   $scope.cancel = function () {
     $modalInstance.close();

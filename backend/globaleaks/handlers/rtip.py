@@ -1,20 +1,20 @@
 # -*- coding: UTF-8
 #
-#   rtip
-#   ****
+# rtip
+# ****
 #
-#   Contains all the logic for handling tip related operations, for the
-#   receiver side. These classes are executed in the /rtip/* URI PATH 
+# Contains all the logic for handling tip related operations, for the
+# receiver side. These classes are executed in the /rtip/* URI PATH
 
 from twisted.internet.defer import inlineCallbacks
 from storm.expr import Desc, And
 
-from globaleaks.handlers.base import BaseHandler 
+from globaleaks.handlers.base import BaseHandler
 from globaleaks.handlers.authentication import transport_security_check, authenticated
 from globaleaks.rest import requests
 
 from globaleaks.utils.utility import log, utc_future_date, datetime_now, \
-                                     datetime_to_ISO8601, datetime_to_pretty_str
+    datetime_to_ISO8601, datetime_to_pretty_str
 
 from globaleaks.utils.structures import Rosetta
 from globaleaks.settings import transact, transact_ro
@@ -22,20 +22,18 @@ from globaleaks.models import Node, Notification, Comment, ReceiverFile, Message
 from globaleaks.rest import errors
 from globaleaks.security import access_tip
 
-def receiver_serialize_tip(internaltip, language):
 
+def receiver_serialize_tip(internaltip, language):
     ret_dict = {
         'id': internaltip.id,
         'context_id': internaltip.context.id,
-        'creation_date' : datetime_to_ISO8601(internaltip.creation_date),
-        'expiration_date' : datetime_to_ISO8601(internaltip.expiration_date),
-        'wb_steps' : internaltip.wb_steps,
-        'global_delete' : False,
+        'creation_date': datetime_to_ISO8601(internaltip.creation_date),
+        'expiration_date': datetime_to_ISO8601(internaltip.expiration_date),
+        'wb_steps': internaltip.wb_steps,
         # this field "inform" the receiver of the new expiration date that can
-        # be set, only if PUT with extend = True is updated
-        'potential_expiration_date' : \
-                datetime_to_ISO8601(utc_future_date(seconds=internaltip.context.tip_timetolive)),
-        'extend' : False,
+        # be set, only if PUT with postpone = True is updated
+        'potential_expiration_date': \
+            datetime_to_ISO8601(utc_future_date(seconds=internaltip.context.tip_timetolive)),
         'enable_private_messages': internaltip.context.enable_private_messages,
         'wb_e2e_public': internaltip.wb_e2e_public,
     }
@@ -43,11 +41,12 @@ def receiver_serialize_tip(internaltip, language):
     # context_name and context_description are localized fields
     mo = Rosetta(internaltip.context.localized_strings)
     mo.acquire_storm_object(internaltip.context)
-    for attr in ['name', 'description' ]:
+    for attr in ['name', 'description']:
         key = "context_%s" % attr
         ret_dict[key] = mo.dump_localized_attr(attr, language)
 
     return ret_dict
+
 
 def receiver_serialize_file(internalfile, receiverfile, receivertip_id):
     """
@@ -62,27 +61,27 @@ def receiver_serialize_file(internalfile, receiverfile, receivertip_id):
             'id': receiverfile.id,
             'ifile_id': internalfile.id,
             'status': receiverfile.status,
-            'href' : "/rtip/" + receivertip_id + "/download/" + receiverfile.id,
+            'href': "/rtip/" + receivertip_id + "/download/" + receiverfile.id,
             # if the ReceiverFile has encrypted status, we append ".pgp" to the filename, to avoid mistake on Receiver side.
-            'name' : ("%s.pgp" % internalfile.name) if receiverfile.status == u'encrypted' else internalfile.name,
-            'content_type' : internalfile.content_type,
-            'creation_date' : datetime_to_ISO8601(internalfile.creation_date),
+            'name': ("%s.pgp" % internalfile.name) if receiverfile.status == u'encrypted' else internalfile.name,
+            'content_type': internalfile.content_type,
+            'creation_date': datetime_to_ISO8601(internalfile.creation_date),
             'size': receiverfile.size,
             'downloads': receiverfile.downloads
-      }
+        }
 
-    else: # == 'unavailable' in this case internal file metadata is returned.
+    else:  # == 'unavailable' in this case internal file metadata is returned.
 
         ret_dict = {
             'id': receiverfile.id,
             'ifile_id': internalfile.id,
             'status': 'unavailable',
-            'href' : "",
-            'name' : internalfile.name, # original filename
-            'content_type' : internalfile.content_type, # original content size
-            'creation_date' : datetime_to_ISO8601(internalfile.creation_date), # original creation_date
-            'size': int(internalfile.size), # original filesize
-            'downloads': unicode(receiverfile.downloads) # this counter is always valid
+            'href': "",
+            'name': internalfile.name,  # original filename
+            'content_type': internalfile.content_type,  # original content size
+            'creation_date': datetime_to_ISO8601(internalfile.creation_date),  # original creation_date
+            'size': int(internalfile.size),  # original filesize
+            'downloads': unicode(receiverfile.downloads)  # this counter is always valid
         }
 
     return ret_dict
@@ -92,7 +91,8 @@ def db_get_files_receiver(store, user_id, tip_id):
     rtip = access_tip(store, user_id, tip_id)
 
     receiver_files = store.find(ReceiverFile,
-        (ReceiverFile.internaltip_id == rtip.internaltip_id, ReceiverFile.receiver_id == rtip.receiver_id))
+                                (ReceiverFile.internaltip_id == rtip.internaltip_id,
+                                 ReceiverFile.receiver_id == rtip.receiver_id))
 
     files_list = []
     for receiverfile in receiver_files:
@@ -121,15 +121,16 @@ def db_get_tip_receiver(store, user_id, tip_id, language):
 
     node = store.find(Node).one()
 
-    tip_desc['postpone_superpower'] = (node.postpone_superpower or
-                                       rtip.internaltip.context.postpone_superpower or
-                                       rtip.receiver.postpone_superpower)
+    tip_desc['can_postpone_expiration'] = (node.can_postpone_expiration or
+                                           rtip.internaltip.context.can_postpone_expiration or
+                                           rtip.receiver.can_postpone_expiration)
 
     tip_desc['can_delete_submission'] = (node.can_delete_submission or
                                          rtip.internaltip.context.can_delete_submission or
                                          rtip.receiver.can_delete_submission)
 
     return tip_desc
+
 
 def db_increment_receiver_access_count(store, user_id, tip_id):
     rtip = access_tip(store, user_id, tip_id)
@@ -144,28 +145,6 @@ def db_increment_receiver_access_count(store, user_id, tip_id):
 
 
 @transact
-def delete_receiver_tip(store, user_id, tip_id):
-    """
-    This operation is permitted to every receiver, and trigger
-    a System comment on the Tip history.
-    """
-    rtip = access_tip(store, user_id, tip_id)
-
-    comment = Comment()
-    comment.content = "%s personally remove from this Tip" % rtip.receiver.name
-    comment.system_content = dict({ "type": 2,
-                                    "receiver_name": rtip.receiver.name})
-
-    comment.internaltip_id = rtip.internaltip.id
-    comment.author = u'system' # The printed line
-    comment.type = u'system'
-
-    rtip.internaltip.comments.add(comment)
-
-    store.remove(rtip)
-
-
-@transact
 def delete_internal_tip(store, user_id, tip_id):
     """
     Delete internalTip is possible only to Receiver with
@@ -176,8 +155,8 @@ def delete_internal_tip(store, user_id, tip_id):
     node = store.find(Node).one()
 
     if not (node.can_delete_submission or
-            rtip.internaltip.context.can_delete_submission or
-            rtip.receiver.can_delete_submission):
+                rtip.internaltip.context.can_delete_submission or
+                rtip.receiver.can_delete_submission):
         raise errors.ForbiddenOperation
 
     store.remove(rtip.internaltip)
@@ -189,39 +168,39 @@ def postpone_expiration_date(store, user_id, tip_id):
 
     node = store.find(Node).one()
 
-    if not (node.postpone_superpower or
-            rtip.internaltip.context.postpone_superpower or
-            rtip.receiver.postpone_superpower):
+    if not (node.can_postpone_expiration or
+                rtip.internaltip.context.can_postpone_expiration or
+                rtip.receiver.can_postpone_expiration):
 
         raise errors.ExtendTipLifeNotEnabled()
     else:
-        log.debug("Postpone check: Node %s, Context %s, Receiver %s" %(
-            "True" if node.postpone_superpower else "False",
-            "True" if rtip.internaltip.context.postpone_superpower else "False",
-            "True" if rtip.receiver.postpone_superpower else "False"
+        log.debug("Postpone check: Node %s, Context %s, Receiver %s" % (
+            "True" if node.can_postpone_expiration else "False",
+            "True" if rtip.internaltip.context.can_postpone_expiration else "False",
+            "True" if rtip.receiver.can_postpone_expiration else "False"
         ))
 
     rtip.internaltip.expiration_date = \
         utc_future_date(seconds=rtip.internaltip.context.tip_timetolive)
 
-    log.debug(" [%s] in %s has extended expiration time to %s" % (
+    log.debug(" [%s] in %s has postponeed expiration time to %s" % (
         rtip.receiver.name,
         datetime_to_pretty_str(datetime_now()),
         datetime_to_pretty_str(rtip.internaltip.expiration_date)))
 
     comment = Comment()
     comment.system_content = dict({
-           'type': "1", # the first kind of structured system_comments
-           'receiver_name': rtip.receiver.name,
-           'expire_on' : datetime_to_ISO8601(rtip.internaltip.expiration_date)
+        'type': "1",  # the first kind of structured system_comments
+        'receiver_name': rtip.receiver.name,
+        'expire_on': datetime_to_ISO8601(rtip.internaltip.expiration_date)
     })
 
     # remind: this is put just for debug, it's never used in the flow
     # and a system comment may have nothing to say except the struct
     comment.content = "%s %s %s (UTC)" % (
-                   rtip.receiver.name,
-                   datetime_to_pretty_str(datetime_now()),
-                   datetime_to_pretty_str(rtip.internaltip.expiration_date))
+        rtip.receiver.name,
+        datetime_to_pretty_str(datetime_now()),
+        datetime_to_pretty_str(rtip.internaltip.expiration_date))
 
     comment.internaltip_id = rtip.internaltip.id
     comment.author = u'System'
@@ -275,12 +254,13 @@ class RTipInstance(BaseHandler):
         Some special operation over the Tip are handled here
         """
 
-        request = self.validate_message(self.request.body, requests.actorsTipOpsDesc)
+        request = self.validate_message(self.request.body, requests.TipOpsDesc)
 
-        if request['extend']:
-            yield postpone_expiration_date(self.current_user.user_id, tip_id)
+        if request['operation']:
+            if request['operation'] == 'postpone':
+                yield postpone_expiration_date(self.current_user.user_id, tip_id)
 
-        self.set_status(202) # Updated
+        self.set_status(202)  # Updated
         self.finish()
 
     @transport_security_check('receiver')
@@ -288,33 +268,25 @@ class RTipInstance(BaseHandler):
     @inlineCallbacks
     def delete(self, tip_id):
         """
-        Request: actorsTipOpsDesc
         Response: None
         Errors: ForbiddenOperation, TipIdNotFound
 
-        global delete: is removed InternalTip and all the things derived
-        personal delete: is removed the ReceiverTip and ReceiverFiles
+        delete: remove the Internaltip and all the associated data
         """
+        yield delete_internal_tip(self.current_user.user_id, tip_id)
 
-        request = self.validate_message(self.request.body, requests.actorsTipOpsDesc)
-
-        if request['global_delete']:
-            yield delete_internal_tip(self.current_user.user_id, tip_id)
-        else:
-            yield delete_receiver_tip(self.current_user.user_id, tip_id)
-
-        self.set_status(200) # Success
+        self.set_status(200)  # Success
         self.finish()
 
 
 def receiver_serialize_comment(comment):
     comment_desc = {
-        'comment_id' : comment.id,
-        'type' : comment.type,
-        'content' : comment.content,
-        'system_content' : comment.system_content if comment.system_content else {},
-        'author' : comment.author,
-        'creation_date' : datetime_to_ISO8601(comment.creation_date)
+        'comment_id': comment.id,
+        'type': comment.type,
+        'content': comment.content,
+        'system_content': comment.system_content if comment.system_content else {},
+        'author': comment.author,
+        'creation_date': datetime_to_ISO8601(comment.creation_date)
     }
 
     return comment_desc
@@ -338,7 +310,7 @@ def create_comment_receiver(store, user_id, tip_id, request):
     comment = Comment()
     comment.content = request['content']
     comment.internaltip_id = rtip.internaltip.id
-    comment.author = rtip.receiver.name # The printed line
+    comment.author = rtip.receiver.name
     comment.type = u'receiver'
 
     rtip.internaltip.comments.add(comment)
@@ -374,27 +346,25 @@ class RTipCommentCollection(BaseHandler):
     @inlineCallbacks
     def post(self, tip_id):
         """
-        Request: actorsCommentDesc
-        Response: actorsCommentDesc
+        Request: CommentDesc
+        Response: CommentDesc
         Errors: InvalidAuthentication, InvalidInputFormat, TipIdNotFound, TipReceiptNotFound
         """
 
-        request = self.validate_message(self.request.body, requests.actorsCommentDesc)
+        request = self.validate_message(self.request.body, requests.CommentDesc)
 
         answer = yield create_comment_receiver(self.current_user.user_id, tip_id, request)
 
-        self.set_status(201) # Created
+        self.set_status(201)  # Created
         self.finish(answer)
 
 
 @transact_ro
 def get_receiver_list_receiver(store, user_id, tip_id, language):
-
     rtip = access_tip(store, user_id, tip_id)
 
     receiver_list = []
     for rtip in rtip.internaltip.receivertips:
-
         receiver_desc = {
             "pgp_key_status": rtip.receiver.pgp_key_status,
             "can_delete_submission": rtip.receiver.can_delete_submission,
@@ -435,19 +405,18 @@ class RTipReceiversCollection(BaseHandler):
 
 
 def receiver_serialize_message(msg):
-
     return {
-        'id' : msg.id,
-        'creation_date' : datetime_to_ISO8601(msg.creation_date),
-        'content' : msg.content,
-        'visualized' : msg.visualized,
-        'type' : msg.type,
-        'author' : msg.author
+        'id': msg.id,
+        'creation_date': datetime_to_ISO8601(msg.creation_date),
+        'content': msg.content,
+        'visualized': msg.visualized,
+        'type': msg.type,
+        'author': msg.author
     }
+
 
 @transact
 def get_messages_list(store, user_id, tip_id):
-
     rtip = access_tip(store, user_id, tip_id)
 
     msglist = store.find(Message, Message.receivertip_id == rtip.id)
@@ -463,9 +432,9 @@ def get_messages_list(store, user_id, tip_id):
 
     return content_list
 
+
 @transact
 def create_message_receiver(store, user_id, tip_id, request):
-
     rtip = access_tip(store, user_id, tip_id)
 
     msg = Message()
@@ -489,7 +458,6 @@ class ReceiverMsgCollection(BaseHandler):
     @authenticated('receiver')
     @inlineCallbacks
     def get(self, tip_id):
-
         answer = yield get_messages_list(self.current_user.user_id, tip_id)
 
         self.set_status(200)
@@ -500,14 +468,14 @@ class ReceiverMsgCollection(BaseHandler):
     @inlineCallbacks
     def post(self, tip_id):
         """
-        Request: actorsCommentDesc
-        Response: actorsCommentDesc
+        Request: CommentDesc
+        Response: CommentDesc
         Errors: InvalidAuthentication, InvalidInputFormat, TipIdNotFound, TipReceiptNotFound
         """
 
-        request = self.validate_message(self.request.body, requests.actorsCommentDesc)
+        request = self.validate_message(self.request.body, requests.CommentDesc)
 
         message = yield create_message_receiver(self.current_user.user_id, tip_id, request)
 
-        self.set_status(201) # Created
+        self.set_status(201)  # Created
         self.finish(message)

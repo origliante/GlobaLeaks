@@ -1,52 +1,49 @@
 # -*- coding: utf-8 -*-
 #
-#  files
+# files
 #  *****
 #
 # Backend supports for jQuery File Uploader, and implementation of the
 # classes executed when an HTTP client contact /files/* URI
 
 from __future__ import with_statement
-import os
-import time
-
 import shutil
 
+import os
 from twisted.internet import threads
 from twisted.internet.defer import inlineCallbacks
-
 from globaleaks.settings import transact, transact_ro, GLSetting
 from globaleaks.handlers.base import BaseHandler
 from globaleaks.handlers.authentication import transport_security_check, authenticated, unauthenticated
 from globaleaks.utils.utility import log, datetime_to_ISO8601, datetime_now
 from globaleaks.rest import errors
 from globaleaks.models import ReceiverFile, InternalTip, InternalFile, WhistleblowerTip
-from globaleaks.security import access_tip, directory_traversal_check
+from globaleaks.security import access_tip
 from globaleaks.utils.token import TokenList
 
-def serialize_file(internalfile):
 
+def serialize_file(internalfile):
     file_desc = {
-        'size' : internalfile.size,
-        'content_type' : internalfile.content_type,
-        'name' : internalfile.name,
+        'size': internalfile.size,
+        'content_type': internalfile.content_type,
+        'name': internalfile.name,
         'creation_date': datetime_to_ISO8601(internalfile.creation_date),
-        'id' : internalfile.id
+        'id': internalfile.id
     }
 
     return file_desc
 
-def serialize_receiver_file(receiverfile):
 
+def serialize_receiver_file(receiverfile):
     internalfile = receiverfile.internalfile
 
     file_desc = {
-        'size' : receiverfile.size,
-        'content_type' : internalfile.content_type,
-        'name' : ("%s.pgp" % internalfile.name) if receiverfile.status == u'encrypted' else internalfile.name,
+        'size': receiverfile.size,
+        'content_type': internalfile.content_type,
+        'name': ("%s.pgp" % internalfile.name) if receiverfile.status == u'encrypted' else internalfile.name,
         'creation_date': datetime_to_ISO8601(internalfile.creation_date),
-        'downloads' : receiverfile.downloads,
-        'path' : receiverfile.file_path,
+        'downloads': receiverfile.downloads,
+        'path': receiverfile.file_path,
     }
 
     return file_desc
@@ -59,11 +56,11 @@ def serialize_memory_file(uploaded_file):
     information about our file.
     """
     return {
-        'content_type' : unicode(uploaded_file['content_type']),
+        'content_type': unicode(uploaded_file['content_type']),
         'creation_date': datetime_to_ISO8601(uploaded_file['creation_date']),
         'id': u'00000000-0000-0000-0000-000000000000',
-            # 'id' is ignored, TODO align API/requsts.py
-        'name' : unicode(uploaded_file['filename']),
+        # 'id' is ignored, TODO align API/requsts.py
+        'name': unicode(uploaded_file['filename']),
         'size': uploaded_file['body_len'],
     }
 
@@ -85,7 +82,6 @@ def register_file_db(store, uploaded_file, internaltip_id):
           'filename': 'SteganographyIsImportant.png'
         }
     """
-
     internaltip = store.find(InternalTip,
                              InternalTip.id == internaltip_id).one()
 
@@ -127,7 +123,7 @@ def dump_file_fs(uploaded_file):
                uploaded_file['filename'],
                uploaded_file['body_filepath'],
                encrypted_destination)
-    )
+              )
 
     shutil.move(uploaded_file['body_filepath'], encrypted_destination)
 
@@ -141,7 +137,6 @@ def dump_file_fs(uploaded_file):
 
 @transact_ro
 def get_itip_id_by_wbtip_id(store, wb_tip_id):
-
     wb_tip = store.find(WhistleblowerTip,
                         WhistleblowerTip.id == wb_tip_id).one()
 
@@ -159,11 +154,10 @@ class FileAdd(BaseHandler):
 
     @inlineCallbacks
     def handle_file_append(self, itip_id):
-        result_list = []
+        uploaded_file = self.get_file_upload()
+        if uploaded_file is None:
+            return
 
-        start_time = time.time()
-
-        uploaded_file = self.request.body
         uploaded_file['body'].avoid_delete()
         uploaded_file['body'].close()
 
@@ -181,12 +175,17 @@ class FileAdd(BaseHandler):
             log.err("Unable to register (append) file in DB: %s" % excep)
             raise errors.InternalServerError("Unable to accept new files")
 
-        registered_file['elapsed_time'] = time.time() - start_time
-
-        result_list.append(registered_file)
-
-        self.set_status(201) # Created
-        self.finish({'files': result_list})
+    @transport_security_check('wb')
+    @unauthenticated
+    def get(self, *args):
+        """
+        Parameter: internaltip_id
+        Request: Unknown
+        Response: Unknown
+        Errors: TokenFailure
+        """
+        self.set_status(204)  # We currently do not implement file resume
+        self.finish()
 
     @transport_security_check('wb')
     @authenticated('wb')
@@ -205,6 +204,9 @@ class FileAdd(BaseHandler):
 
         yield self.handle_file_append(itip_id)
 
+        self.set_status(201)  # Created
+        self.finish()
+
 
 class FileInstance(BaseHandler):
     """
@@ -213,12 +215,10 @@ class FileInstance(BaseHandler):
 
     @inlineCallbacks
     def handle_file_upload(self, token):
-        # remind self: why is a list with just one element, and not a dict ?
-        result_list = []
+        uploaded_file = self.get_file_upload()
+        if uploaded_file is None:
+            return
 
-        start_time = time.time()
-
-        uploaded_file = self.request.body
         uploaded_file['body'].avoid_delete()
         uploaded_file['body'].close()
 
@@ -234,13 +234,19 @@ class FileInstance(BaseHandler):
             log.err("Unable to save file in filesystem: %s" % excep)
             raise errors.InternalServerError("Unable to accept files")
 
-        registered_file['elapsed_time'] = time.time() - start_time
+    @transport_security_check('wb')
+    @unauthenticated
+    def get(self, token_id):
+        """
+        Parameter: internaltip_id
+        Request: Unknown
+        Response: Unknown
+        Errors: TokenFailure
+        """
+        token = TokenList.get(token_id)
 
-        result_list.append(registered_file)
-
-        self.set_status(201) # Created
-        self.finish({'files': result_list})
-
+        self.set_status(204)  # We currently do not implement file resume
+        self.finish()
 
     @transport_security_check('wb')
     @unauthenticated
@@ -252,12 +258,14 @@ class FileInstance(BaseHandler):
         Response: Unknown
         Errors: TokenFailure
         """
-
         token = TokenList.get(token_id)
 
-        log.debug("file upload with Token associated : %s" % token)
+        log.debug("file upload with token associated: %s" % token)
 
         yield self.handle_file_upload(token)
+
+        self.set_status(201)  # Created
+        self.finish()
 
 
 @transact
@@ -265,7 +273,6 @@ def download_file(store, user_id, tip_id, file_id):
     """
     Auth temporary disabled, just Tip_id and File_id required
     """
-
     access_tip(store, user_id, tip_id)
 
     rfile = store.find(ReceiverFile,
@@ -284,11 +291,10 @@ def download_file(store, user_id, tip_id, file_id):
 
 @transact
 def download_all_files(store, user_id, tip_id):
-
     access_tip(store, user_id, tip_id)
 
     rfiles = store.find(ReceiverFile,
-                        ReceiverFile.receiver_tip_id == unicode(tip_id))
+                        ReceiverFile.receivertip_id == unicode(tip_id))
 
     files_list = []
     for sf in rfiles:
@@ -299,12 +305,10 @@ def download_all_files(store, user_id, tip_id):
 
 
 class Download(BaseHandler):
-
     @transport_security_check('receiver')
     @authenticated('receiver')
     @inlineCallbacks
     def post(self, tip_id, rfile_id):
-
         rfile = yield download_file(self.current_user.user_id, tip_id, rfile_id)
 
         # keys:  'file_path'  'size' : 'content_type' 'file_name'
@@ -314,7 +318,7 @@ class Download(BaseHandler):
         self.set_header('X-Download-Options', 'noopen')
         self.set_header('Content-Type', 'application/octet-stream')
         self.set_header('Content-Length', rfile['size'])
-        self.set_header('Content-Disposition','attachment; filename=\"%s\"' % rfile['name'])
+        self.set_header('Content-Disposition', 'attachment; filename=\"%s\"' % rfile['name'])
 
         filelocation = os.path.join(GLSetting.submission_path, rfile['path'])
 

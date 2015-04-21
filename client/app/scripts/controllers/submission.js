@@ -30,6 +30,12 @@ GLClient.controller('SubmissionCtrl',
     $scope.receivers_selectable = true;
   }
 
+  if ($scope.node.show_contexts_in_alphabetical_order) {
+    $scope.contextsOrderPredicate = 'name';
+  } else {
+    $scope.contextsOrderPredicate = 'presentation_order';
+  }
+
   new Submission(function (submission) {
     $scope.submission = submission;
     $scope.fields = submission.fields;
@@ -61,7 +67,6 @@ GLClient.controller('SubmissionCtrl',
   };
 
   $scope.selectable = function () {
-
     if ($scope.submission.current_context.maximum_selectable_receivers == 0) {
       return true;
     }
@@ -113,10 +118,23 @@ GLClient.controller('SubmissionCtrl',
     }
   };
 
+  $scope.fileupload_url = function() {
+    if (!$scope.submission) {
+      return;
+    }
+
+    return '/submission/' + $scope.submission.current_submission.id + '/file';
+  };
   // Watch for changes in certain variables
   $scope.$watch('submission.current_context', function () {
     if ($scope.submission && $scope.submission.current_context) {
       $scope.submission.create(function () {
+
+        if ($scope.submission.current_context.show_receivers_in_alphabetical_order) {
+          $scope.receiversOrderPredicate = 'name';
+        } else {
+          $scope.receiversOrderPredicate = 'presentation_order';
+        }
 
         if ((!receivers_selectable && !$scope.submission.current_context.show_receivers)) {
           $scope.skip_first_step = true;
@@ -126,7 +144,6 @@ GLClient.controller('SubmissionCtrl',
           $scope.selection = 0;
         }
 
-        $scope.fileupload_url = '/submission/' + $scope.submission.current_submission.id + '/file';
       });
       checkReceiverSelected();
      }
@@ -140,9 +157,9 @@ GLClient.controller('SubmissionCtrl',
 
 }]).
 controller('SubmissionStepCtrl', ['$scope', function($scope) {
-  $scope.queue = $scope.queue || [];
+  $scope.uploads = [];
 }]).
-controller('SubmissionFieldCtrl', ['$scope', '$rootScope', function ($scope, $rootScope) {
+controller('SubmissionFieldCtrl', ['$scope', function ($scope) {
   if ($scope.field.type == 'fileupload') {
     $scope.field.value = {};
   }
@@ -153,17 +170,21 @@ controller('SubmissionFieldCtrl', ['$scope', '$rootScope', function ($scope, $ro
     } else {
       return "";
     }
-  }
+  };
 
   var update_uploads_status = function(e, data) {
-    $scope.submission.uploading = false;
+    var uploading = false;
+
     if ($scope.field.value === "") {
       $scope.field.value = {};
     }
+
     if ($scope.queue) {
       $scope.queue.forEach(function (k) {
         if (!k.id) {
-          $scope.submission.uploading = true;
+          if (!file.error) {
+            uploading = true;
+          }
         } else {
           if (!(k.id in $scope.field.value)) {
             $scope.field.value[k.id] = angular.copy($scope.field.options)
@@ -173,6 +194,8 @@ controller('SubmissionFieldCtrl', ['$scope', '$rootScope', function ($scope, $ro
         }
       });
     }
+
+    $scope.submission.uploading = uploading;
   };
 
   $scope.$on('fileuploadprocessstart', update_uploads_status);
@@ -188,8 +211,6 @@ controller('ReceiptController', ['$scope', '$location', 'Authentication', 'WBRec
                keycode.substr(4, 4) + ' ' +
                keycode.substr(8, 4) + ' ' +
                keycode.substr(12, 4);
-      } else {
-        ret = keycode;
       }
 
       return ret;

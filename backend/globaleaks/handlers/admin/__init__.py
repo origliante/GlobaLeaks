@@ -10,19 +10,19 @@ import shutil
 from globaleaks import security, LANGUAGES_SUPPORTED_CODES, LANGUAGES_SUPPORTED
 from globaleaks.handlers.base import GLApiCache
 from globaleaks.handlers.admin.field import disassociate_field, get_field_association
+from globaleaks.handlers.admin.langfiles import *
 from globaleaks.handlers.admin.staticfiles import *
 from globaleaks.handlers.admin.overview import *
 from globaleaks.handlers.admin.statistics import *
 from globaleaks.handlers.admin.notification import *
-from globaleaks.handlers.node import get_public_context_list, get_public_receiver_list, \
-    anon_serialize_node, anon_serialize_step
+from globaleaks.handlers.node import anon_serialize_step
 from globaleaks import models
 from globaleaks.rest import errors, requests
 from globaleaks.security import pgp_options_parse
 from globaleaks.settings import transact, transact_ro, GLSetting
 from globaleaks.third_party import rstr
 from globaleaks.utils.structures import fill_localized_keys, get_localized_values
-from globaleaks.utils.utility import log, datetime_now, datetime_null, seconds_convert, datetime_to_ISO8601, uuid4
+from globaleaks.utils.utility import log, datetime_now, seconds_convert, datetime_to_ISO8601, uuid4
 
 
 def db_admin_serialize_node(store, language):
@@ -38,21 +38,22 @@ def db_admin_serialize_node(store, language):
     admin = store.find(models.User, (models.User.username == unicode('admin'))).one()
 
     # Contexts and Receivers relationship
-    associated = store.find(models.ReceiverContext).count()
+    configured  = store.find(models.ReceiverContext).count() > 0
+
     custom_homepage = os.path.isfile(os.path.join(GLSetting.static_path, "custom_homepage.html"))
 
     ret_dict = {
-        "name": node.name,
-        "presentation": node.presentation,
-        "creation_date": datetime_to_ISO8601(node.creation_date),
-        "last_update": datetime_to_ISO8601(node.last_update),
-        "hidden_service": node.hidden_service,
-        "public_site": node.public_site,
-        "email": node.email,
-        "version": GLSetting.version_string,
-        "languages_supported": LANGUAGES_SUPPORTED,
-        "languages_enabled": node.languages_enabled,
-        "default_language" : node.default_language,
+        'name': node.name,
+        'presentation': node.presentation,
+        'creation_date': datetime_to_ISO8601(node.creation_date),
+        'last_update': datetime_to_ISO8601(node.last_update),
+        'hidden_service': node.hidden_service,
+        'public_site': node.public_site,
+        'email': node.email,
+        'version': GLSetting.version_string,
+        'languages_supported': LANGUAGES_SUPPORTED,
+        'languages_enabled': node.languages_enabled,
+        'default_language' : node.default_language,
         'default_timezone' : node.default_timezone,
         'maximum_filesize': node.maximum_filesize,
         'maximum_namesize': node.maximum_namesize,
@@ -62,15 +63,15 @@ def db_admin_serialize_node(store, language):
         'tor2web_submission': GLSetting.memory_copy.tor2web_submission,
         'tor2web_receiver': GLSetting.memory_copy.tor2web_receiver,
         'tor2web_unauth': GLSetting.memory_copy.tor2web_unauth,
-        'postpone_superpower': node.postpone_superpower,
+        'can_postpone_expiration': node.can_postpone_expiration,
         'can_delete_submission': node.can_delete_submission,
         'ahmia': node.ahmia,
         'allow_unencrypted': node.allow_unencrypted,
         'allow_iframes_inclusion': node.allow_iframes_inclusion,
         'wizard_done': node.wizard_done,
-        'configured': True if associated else False,
-        'password': u"",
-        'old_password': u"",
+        'configured': configured,
+        'password': u'',
+        'old_password': u'',
         'custom_homepage': custom_homepage,
         'disable_privacy_badge': node.disable_privacy_badge,
         'disable_security_awareness_badge': node.disable_security_awareness_badge,
@@ -84,6 +85,7 @@ def db_admin_serialize_node(store, language):
         'landing_page': node.landing_page,
         'file_encryption_e2e' : node.file_encryption_e2e,
         'submission_data_e2e' : node.submission_data_e2e,
+		'show_contexts_in_alphabetical_order': node.show_contexts_in_alphabetical_order
     }
 
     return get_localized_values(ret_dict, node, node.localized_strings, language)
@@ -239,21 +241,22 @@ def admin_serialize_context(store, context, language):
                 for s in context.steps.order_by(models.Step.number)]
 
     ret_dict = {
-        "id": context.id,
-        "creation_date": datetime_to_ISO8601(context.creation_date),
-        "last_update": datetime_to_ISO8601(context.last_update),
-        "receivers": [r.id for r in context.receivers],
+        'id': context.id,
+        'creation_date': datetime_to_ISO8601(context.creation_date),
+        'last_update': datetime_to_ISO8601(context.last_update),
+        'receivers': [r.id for r in context.receivers],
         # tip expressed in day, submission in hours
-        "tip_timetolive": context.tip_timetolive / (60 * 60 * 24),
-        "select_all_receivers": context.select_all_receivers,
-        "postpone_superpower": context.postpone_superpower,
-        "can_delete_submission": context.can_delete_submission,
-        "maximum_selectable_receivers": context.maximum_selectable_receivers,
-        "show_small_cards": context.show_small_cards,
-        "show_receivers": context.show_receivers,
-        "enable_private_messages": context.enable_private_messages,
-        "presentation_order": context.presentation_order,
-        "steps": steps
+        'tip_timetolive': context.tip_timetolive / (60 * 60 * 24),
+        'select_all_receivers': context.select_all_receivers,
+        'can_postpone_expiration': context.can_postpone_expiration,
+        'can_delete_submission': context.can_delete_submission,
+        'maximum_selectable_receivers': context.maximum_selectable_receivers,
+        'show_small_cards': context.show_small_cards,
+        'show_receivers': context.show_receivers,
+        'enable_private_messages': context.enable_private_messages,
+        'presentation_order': context.presentation_order,
+        'show_receivers_in_alphabetical_order': context.show_receivers_in_alphabetical_order,
+        'steps': steps
     }
 
     return get_localized_values(ret_dict, context, context.localized_strings, language)
@@ -267,33 +270,31 @@ def admin_serialize_receiver(receiver, language):
     :return: a dictionary representing the serialization of the receiver
     """
     ret_dict = {
-        "id": receiver.id,
-        "name": receiver.name,
-        "creation_date": datetime_to_ISO8601(receiver.creation_date),
-        "last_update": datetime_to_ISO8601(receiver.last_update),
-        "can_delete_submission": receiver.can_delete_submission,
-        "postpone_superpower": receiver.postpone_superpower,
-        "username": receiver.user.username,
+        'id': receiver.id,
+        'name': receiver.name,
+        'creation_date': datetime_to_ISO8601(receiver.creation_date),
+        'last_update': datetime_to_ISO8601(receiver.last_update),
+        'can_delete_submission': receiver.can_delete_submission,
+        'can_postpone_expiration': receiver.can_postpone_expiration,
+        'username': receiver.user.username,
         'mail_address': receiver.mail_address,
         'ping_mail_address': receiver.ping_mail_address,
-        "password": u"",
-        "state": receiver.user.state,
-        "configuration": receiver.configuration,
-        "contexts": [c.id for c in receiver.contexts],
-        "pgp_key_info": receiver.pgp_key_info,
-        "pgp_key_public": receiver.pgp_key_public,
-        "pgp_key_remove": False,
-        "pgp_key_fingerprint": receiver.pgp_key_fingerprint,
-        "pgp_key_expiration": datetime_to_ISO8601(receiver.pgp_key_expiration),
-        "pgp_key_status": receiver.pgp_key_status,
-        "pgp_e2e_public": receiver.pgp_e2e_public,
-        "pgp_e2e_private": receiver.pgp_e2e_private,
-        "tip_notification": receiver.tip_notification,
-        "ping_notification": receiver.ping_notification,
-        "presentation_order": receiver.presentation_order,
-        "language": receiver.user.language,
-        "timezone": receiver.user.timezone,
-        "password_change_needed": receiver.user.password_change_needed
+        'password': u'',
+        'state': receiver.user.state,
+        'configuration': receiver.configuration,
+        'contexts': [c.id for c in receiver.contexts],
+        'pgp_key_info': receiver.pgp_key_info,
+        'pgp_key_public': receiver.pgp_key_public,
+        'pgp_key_remove': False,
+        'pgp_key_fingerprint': receiver.pgp_key_fingerprint,
+        'pgp_key_expiration': datetime_to_ISO8601(receiver.pgp_key_expiration),
+        'pgp_key_status': receiver.pgp_key_status,
+        'tip_notification': receiver.tip_notification,
+        'ping_notification': receiver.ping_notification,
+        'presentation_order': receiver.presentation_order,
+        'language': receiver.user.language,
+        'timezone': receiver.user.timezone,
+        'password_change_needed': receiver.user.password_change_needed
     }
 
     return get_localized_values(ret_dict, receiver, receiver.localized_strings, language)
@@ -351,10 +352,6 @@ def db_update_node(store, request, wizard_done, language):
     if wizard_done:
         node.wizard_done = True
 
-    # since change of regexp format to XXXX-XXXX-XXXX-XXXX
-    # we removed the possibility to customize the receipt from the GLCllient
-    request['receipt_regexp'] = GLSetting.defaults.receipt_regexp
-
     try:
         node.update(request)
     except DatabaseError as dberror:
@@ -398,6 +395,7 @@ def acquire_context_timetolive(request):
 
     return tip_ttl
 
+
 def field_is_present(store, field):
     result = store.find(models.Field,
                         models.Field.label == field['label'],
@@ -406,6 +404,7 @@ def field_is_present(store, field):
                         models.Field.multi_entry == field['multi_entry'],
                         models.Field.type == field['type'],
                         models.Field.preview == field['preview'])
+
     return result.count() > 0
 
 
@@ -660,7 +659,7 @@ def db_create_receiver(store, request, language):
         'salt': receiver_salt,
         'role': u'receiver',
         'state': u'enabled',
-        'language': u"en",
+        'language': u'en',
         'timezone': 0,
         'password_change_needed': True,
     }
@@ -795,7 +794,7 @@ class NodeInstance(BaseHandler):
         Get the node infos.
 
         Parameters: None
-        Response: adminNodeDesc
+        Response: AdminNodeDesc
         """
         node_description = yield admin_serialize_node(self.request.language)
         self.set_status(200)
@@ -808,12 +807,12 @@ class NodeInstance(BaseHandler):
         """
         Update the node infos.
 
-        Request: adminNodeDesc
-        Response: adminNodeDesc
+        Request: AdminNodeDesc
+        Response: AdminNodeDesc
         Errors: InvalidInputFormat
         """
         request = self.validate_message(self.request.body,
-                                        requests.adminNodeDesc)
+                                        requests.AdminNodeDesc)
 
         node_description = yield update_node(request, True, self.request.language)
         GLApiCache.invalidate()
@@ -848,12 +847,12 @@ class ContextCreate(BaseHandler):
         """
         Create a new context.
 
-        Request: adminContextDesc
-        Response: adminContextDesc
+        Request: AdminContextDesc
+        Response: AdminContextDesc
         Errors: InvalidInputFormat, ReceiverIdNotFound
         """
         request = self.validate_message(self.request.body,
-                                        requests.adminContextDesc)
+                                        requests.AdminContextDesc)
 
         response = yield create_context(request, self.request.language)
         GLApiCache.invalidate()
@@ -871,7 +870,7 @@ class ContextInstance(BaseHandler):
         Get the specified context.
 
         Parameters: context_id
-        Response: adminContextDesc
+        Response: AdminContextDesc
         Errors: ContextIdNotFound, InvalidInputFormat
         """
         response = yield get_context(context_id, self.request.language)
@@ -887,14 +886,14 @@ class ContextInstance(BaseHandler):
         Update the specified context.
 
         Parameters: context_id
-        Request: adminContextDesc
-        Response: adminContextDesc
+        Request: AdminContextDesc
+        Response: AdminContextDesc
         Errors: InvalidInputFormat, ContextIdNotFound, ReceiverIdNotFound
 
         Updates the specified context.
         """
         request = self.validate_message(self.request.body,
-                                        requests.adminContextDesc)
+                                        requests.AdminContextDesc)
 
         response = yield update_context(context_id, request, self.request.language)
         GLApiCache.invalidate()
@@ -909,7 +908,7 @@ class ContextInstance(BaseHandler):
         """
         Delete the specified context.
 
-        Request: adminContextDesc
+        Request: AdminContextDesc
         Response: None
         Errors: InvalidInputFormat, ContextIdNotFound
         """
@@ -946,12 +945,12 @@ class ReceiverCreate(BaseHandler):
         """
         Get the specified receiver.
 
-        Request: adminReceiverDesc
-        Response: adminReceiverDesc
+        Request: AdminReceiverDesc
+        Response: AdminReceiverDesc
         Errors: InvalidInputFormat, ContextIdNotFound
         """
         request = self.validate_message(self.request.body,
-                                        requests.adminReceiverDesc)
+                                        requests.AdminReceiverDesc)
 
         response = yield create_receiver(request, self.request.language)
         GLApiCache.invalidate()
@@ -969,7 +968,7 @@ class ReceiverInstance(BaseHandler):
         Get the specified receiver.
 
         Parameters: receiver_id
-        Response: adminReceiverDesc
+        Response: AdminReceiverDesc
         Errors: InvalidInputFormat, ReceiverIdNotFound
         """
         response = yield get_receiver(receiver_id, self.request.language)
@@ -985,11 +984,11 @@ class ReceiverInstance(BaseHandler):
         Update the specified receiver.
 
         Parameters: receiver_id
-        Request: adminReceiverDesc
-        Response: adminReceiverDesc
+        Request: AdminReceiverDesc
+        Response: AdminReceiverDesc
         Errors: InvalidInputFormat, ReceiverIdNotFound, ContextId
         """
-        request = self.validate_message(self.request.body, requests.adminReceiverDesc)
+        request = self.validate_message(self.request.body, requests.AdminReceiverDesc)
 
         response = yield update_receiver(receiver_id, request, self.request.language)
         GLApiCache.invalidate()

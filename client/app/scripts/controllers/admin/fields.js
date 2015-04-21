@@ -19,15 +19,15 @@ GLClient.controller('AdminFieldTemplatesCtrl', ['$scope', '$filter',
     $scope.moveFieldUp = function(field) {
       field.y -= 1;
       $scope.save_field(field, false);
-    }
+    };
 
     $scope.moveFieldDown = function(field) {
       field.y += 1;
       $scope.save_field(field, false);
-    }
+    };
 
     $scope.deleteFromList = function(list, elem) {
-      var idx = _.indexOf(list, elem);
+      var idx = list.indexOf(elem);
       if (idx != -1) {
         list.splice(idx, 1);
       }
@@ -35,7 +35,7 @@ GLClient.controller('AdminFieldTemplatesCtrl', ['$scope', '$filter',
 
     $scope.toggle_field = function(field, field_group) {
       $scope.field_group_toggled = true;
-      if (field_group.children && (_.indexOf(field_group.children, field) !== -1)) {
+      if (field_group.children && field_group.children.indexOf(field) !== -1) {
         // Remove it from the fieldgroup 
         field.fieldgroup_id = '';
         $scope.admin.field_templates.push(field);
@@ -48,7 +48,7 @@ GLClient.controller('AdminFieldTemplatesCtrl', ['$scope', '$filter',
         $scope.admin.field_templates = $filter('filter')($scope.admin.field_templates, 
                                                          {id: '!'+field.id}, true);
       }
-    }
+    };
 
     $scope.save_all = function () {
       angular.forEach($scope.admin.field_templates, function (field, key) {
@@ -62,14 +62,14 @@ GLClient.controller('AdminFieldTemplatesCtrl', ['$scope', '$filter',
       field.type = new_field.type;
       $scope.admin.fill_default_field_options(field);
       return field;
-    }
+    };
     
     $scope.addField = function(new_field) {
       $scope.fields.push(new_field);
     };
 
     $scope.deleteField = function(field) {
-      var idx = _.indexOf($scope.fields, field);
+      var idx = $scope.fields.indexOf(field);
       $scope.fields.splice(idx, 1);
     };
 
@@ -125,8 +125,9 @@ GLClient.controller('AdminFieldsEditorCtrl', ['$scope',  '$modal',
     }
 
     $scope.typeSwitch = function (type) {
-      if (_.indexOf(['checkbox', 'selectbox'], type) !== -1)
+      if (['checkbox', 'selectbox'].indexOf(type) !== -1) {
         return 'checkbox_or_selectbox';
+      }
       return type;
     };
 
@@ -137,9 +138,10 @@ GLClient.controller('AdminFieldsEditorCtrl', ['$scope',  '$modal',
     $scope.delOption = function(field, option) {
       var index = field.options.indexOf(option);
       field.options.splice(index, 1);
-    }
+    };
 
     $scope.save_field = function(field, called_from_save_all) {
+      var updated_field;
       if (field.is_template) {
         updated_field =  new $scope.admin.fieldtemplate(field);
       } else {

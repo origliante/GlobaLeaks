@@ -23,10 +23,6 @@ function($scope, $rootScope, $http, $route, $location, Admin, Node, GLCache, CON
   $scope.languages_enabled_edit = {};
   $scope.languages_enabled_selector = {};
 
-  function CollapseLanguages($scope) {
-    $scope.isCollapsed = false;
-  }
-
   Node.get(function(node) {
     $scope.languages_supported = {};
     $scope.languages_enabled = [];
@@ -99,10 +95,10 @@ function($scope, $rootScope, $http, $route, $location, Admin, Node, GLCache, CON
 
     var cb = function() {
       $rootScope.$broadcast("REFRESH");
-    }
+    };
 
     $scope.update(node, cb);
-  }
+  };
 
 }]);
 
@@ -113,8 +109,6 @@ GLClient.controller('AdminPasswordCtrl', ['$scope', 'changePasswordWatcher',
 }]);
 
 GLClient.controller('AdminFileUploadCtrl', ['$scope', '$http', function($scope, $http){
-
-    $scope.random = Math.round(Math.random()*1000000);
 
     $scope.uploadfile = false;
 
@@ -130,14 +124,6 @@ GLClient.controller('AdminFileUploadCtrl', ['$scope', '$http', function($scope, 
     $scope.closeUploader = function () {
       $scope.uploadfile = $scope.fileSelected = false;
     };
-
-    $scope.receiverImgUrl = function () {
-      return "/admin/staticfiles/" + $scope.receiver.id;
-    };
-
-    $scope.receiverImgReloadUrl = function() {
-      return "/static/" + $scope.receiver.id + ".png?" + $scope.random;
-    }
 
 }]);
 
@@ -187,7 +173,7 @@ GLClient.controller('AdminContentCtrl', ['$scope', '$http', 'StaticFiles', 'Defa
       }
     }
     return false;
-  }
+  };
 
   $scope.uploadfinished = function () {
     $scope.update_static_files();
@@ -203,7 +189,7 @@ GLClient.controller('AdminContentCtrl', ['$scope', '$http', 'StaticFiles', 'Defa
 
 }]);
 
-GLClient.controller('AdminMailCtrl', ['$scope', '$http', function($scope, $http){
+GLClient.controller('AdminMailCtrl', ['$scope', function($scope){
   $scope.tabs = [
     {
       title:"Main Configuration",
@@ -242,7 +228,7 @@ GLClient.controller('AdminAdvancedCtrl', ['$scope', '$http', '$modal',
       return;
     var modalInstance = $modal.open({
       templateUrl: 'views/partials/disable_encryption.html',
-      controller: 'DisableEncryptionCtrl',
+      controller: 'DisableEncryptionCtrl'
     });
 
     modalInstance.result.then(function(result){

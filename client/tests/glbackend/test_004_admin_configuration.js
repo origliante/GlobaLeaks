@@ -74,20 +74,144 @@ context = {
   "presentation_order":0
 }
 
+var fields = [
+  {
+    id: '',
+    is_template: false,
+    step_id: '',
+    fieldgroup_id: '',
+    label: 'Field 1',
+    type: 'inputbox',
+    preview: false,
+    description: 'field description',
+    hint: 'field hint',
+    multi_entry: false,
+    stats_enabled: false,
+    required: true,
+    children: [],
+    options: [],
+    y: 2,
+    x: 0
+  },
+  {
+    id: '',
+    is_template: false,
+    step_id: '',
+    fieldgroup_id: '',
+    label: 'Field 2',
+    type: 'inputbox',
+    preview: false,
+    description: 'description',
+    hint: 'field hint',
+    multi_entry: false,
+    stats_enabled: false,
+    required: false,
+    children: [],
+    options: [],
+    y: 3,
+    x: 0
+  },
+  {
+    id: '',
+    is_template: false,
+    step_id: '',
+    fieldgroup_id: '',
+    label: 'Field 2',
+    type: 'inputbox',
+    preview: false,
+    description: 'description',
+    hint: 'field hint',
+    multi_entry: false,
+    stats_enabled: false,
+    required: false,
+    children: [],
+    options: [],
+    y: 3,
+    x: 0
+  },
+  {
+    id: '',
+    is_template: false,
+    step_id: '',
+    fieldgroup_id: '',
+    label: 'Name',
+    type: 'inputbox',
+    preview: false,
+    description: 'field description',
+    hint: 'field hint',
+    multi_entry: false,
+    stats_enabled: false,
+    required: false,
+    children: [],
+    options: [],
+    y: 0,
+    x: 0
+  },
+  {
+    id: '',
+    is_template: false,
+    step_id: '',
+    fieldgroup_id: '',
+    label: 'Surname',
+    type: 'inputbox',
+    preview: false,
+    description: 'field description',
+    hint: 'field hint',
+    multi_entry: false,
+    stats_enabled: false,
+    required: false,
+    children: [],
+    options: [],
+    y: 0,
+    x: 0
+  }
+]
+
+var context = {
+  receiver_introduction: 'foca',
+  presentation_order: 0,
+  tip_timetolive: 15,
+  can_postpone_expiration: false,
+  can_delete_submission: true,
+  show_small_cards: false,
+  show_receivers: true,
+  enable_private_messages: true,
+  select_all_receivers: true,
+  show_receivers_in_alphabetical_order: false,
+  description: 'XXXXX ħ ÐÐ',
+  name: 'Context 1',
+  steps: [
+     {
+       label: 'Step 1',
+       description: 'Step Description',
+       hint: 'Step Hint',
+       children: {}
+     },
+     {
+       label: 'Step 2',
+       description: 'Step Description',
+       hint: 'Step Hint',
+       children: {}
+    }
+  ],
+  maximum_selectable_receivers:0,
+  receivers: []
+}
+
 var validate_mandatory_headers = function(headers) {
   var mandatory_headers = {
-    "X-XSS-Protection": "1; mode=block",
-    "X-Robots-Tag": "noindex",
-    "X-Content-Type-Options": "nosniff",
-    "Expires": "-1",
-    "Server": "globaleaks",
-    "Pragma":  "no-cache",
-    "Cache-control": "no-cache, no-store, must-revalidate"
+    'X-XSS-Protection': '1; mode=block',
+    'X-Robots-Tag': 'noindex',
+    'X-Content-Type-Options': 'nosniff',
+    'Expires': '-1',
+    'Server': 'globaleaks',
+    'Pragma':  'no-cache',
+    'Cache-control': 'no-cache, no-store, must-revalidate'
   }
 
   for (var key in mandatory_headers) {
     if (headers[key.toLowerCase()] != mandatory_headers[key]) {
-      throw key + " != " + mandatory_headers[key];
+      throw key + ' != ' + mandatory_headers[key];
     }
   }
 }
@@ -229,6 +353,44 @@ describe('POST /admin/receiver', function () {
             receivers.push(res.body);
 
             receivers_ids.push(res.body.id);
+
+            done();
+
+        });
+      })
+    })(i);
+  }
+})
+
+// we popolate population_order/2 contexts
+describe('POST /admin/context', function () {
+  for (var i=population_order/2; i<population_order; i++) {
+    (function (i) {
+      it('responds 201 on POST /admin/context ' + i + ' (authenticated, valid context)', function (done) {
+        var newObject = JSON.parse(JSON.stringify(context));
+        newObject.name = 'Context ' + i ;
+        newObject.presentation_order = i;
+        newObject.name = 'Context ' + i + ' (selectable receivers: TRUE)';
+        newObject.receivers = receivers_ids;
+
+        app
+          .post('/admin/context')
+          .send(newObject)
+          .set('X-XSRF-TOKEN', 'antani')
+          .set('cookie', 'XSRF-TOKEN=antani')
+          .set('X-Session', authentication['session_id'])
+          .expect(201)
+          .end(function (err, res) {
+
+            if (err) {
+              return done(err);
+            }
+
+            validate_mandatory_headers(res.headers);
+
+            contexts.push(res.body);
+
+            contexts_ids.push(res.body.id);
 
             done();
 

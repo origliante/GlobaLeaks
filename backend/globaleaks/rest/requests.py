@@ -17,39 +17,30 @@ hidden_service_regexp_or_empty    = r'^http://[0-9a-z]{16}\.onion$$|^$'
 https_url_regexp                  = r'^https://([0-9a-z\-]+)\.(.*)$'
 https_url_regexp_or_empty         = r'^https://([0-9a-z\-]+)\.(.*)$|^$'
 landing_page_regexp               = r'^homepage$|^submissionpage$'
+tip_operation_regexp              = r'^postpone$'
 
-dateType = r'(.*)'
+DateType = r'(.*)'
 
-# contentType = r'(application|audio|text|video|image)'
+# ContentType = r'(application|audio|text|video|image)'
 # via stackoverflow:
 # /^(application|audio|example|image|message|model|multipart|text|video)\/[a-zA-Z0-9]+([+.-][a-zA-z0-9]+)*$/
-contentType = r'(.*)'
+ContentType = r'(.*)'
 
-fileDict = {
+FileDesc = {
     'name': unicode,
     'description': unicode,
     'size': int,
-    'content_type': contentType,
-    'date': dateType,
-    }
-
-formFieldsDict = {
-    'key': unicode,
-    'presentation_order': int,
-    'name': unicode,
-    'required': bool,
-    'preview': bool,
-    'hint': unicode,
-    'type': unicode,
+    'content_type': ContentType,
+    'date': DateType
 }
 
-authDict = {
+AuthDesc = {
     'username': unicode,
     'password': unicode,
     'role': unicode
 }
 
-wbSubmissionDesc = {
+SubmissionDesc = {
     'wb_steps': list,
     'human_captcha_answer': int,
     'receivers': [uuid_regexp],
@@ -57,15 +48,12 @@ wbSubmissionDesc = {
     'wb_signature': unicode,
 }
 
-receiverReceiverDesc = {
+ReceiverReceiverDesc = {
     'name': unicode,
     'password': unicode,
     'old_password': unicode,
-    # 'username': unicode, XXX at creation time is the same of mail_address
     'mail_address': email_regexp,
-    # mail_address contain the 'admin' inserted mail
     'ping_mail_address': email_regexp,
-    # ping_mail_address is a copy of 'mail_address' if unset.
     'description': unicode,
     'pgp_key_remove': bool,
     'pgp_key_fingerprint': unicode,
@@ -78,26 +66,25 @@ receiverReceiverDesc = {
     "tip_notification": bool,
     "ping_notification": bool,
     "language": unicode,
-    "timezone": int,
+    "timezone": int
 }
 
-actorsCommentDesc = {
-    'content': unicode,
+CommentDesc = {
+    'content': unicode
 }
 
-actorsTipOpsDesc = {
-    'global_delete': bool,
-    'extend': bool,
+TipOpsDesc = {
+    'operation': tip_operation_regexp,
 }
 
-adminStepDesc = {
+AdminStepDesc = {
     'label': unicode,
     'hint': unicode,
     'description': unicode,
     'children': list
 }
 
-adminNodeDesc = {
+AdminNodeDesc = {
     'name': unicode,
     'description': unicode,
     'presentation': unicode,
@@ -121,7 +108,7 @@ adminNodeDesc = {
     'tor2web_submission': bool,
     'tor2web_receiver': bool,
     'tor2web_unauth': bool,
-    'postpone_superpower': bool,
+    'can_postpone_expiration': bool,
     'can_delete_submission': bool,
     'exception_email': email_regexp,
     'ahmia': bool,
@@ -141,11 +128,12 @@ adminNodeDesc = {
     'header_title_submissionpage': unicode,
     'header_title_receiptpage': unicode,
     'landing_page': landing_page_regexp,
+	'show_contexts_in_alphabetical_order': bool,
     'file_encryption_e2e': bool,
     'submission_data_e2e': bool,
 }
 
-adminNotificationDesc = {
+AdminNotificationDesc = {
     'server': unicode,
     'port': int,
     'security': unicode, # 'TLS' or 'SSL' only
@@ -182,11 +170,11 @@ adminNotificationDesc = {
     'send_email_for_every_event': bool
 }
 
-adminContextDesc = {
+AdminContextDesc = {
     'name': unicode,
     'description': unicode,
     'receiver_introduction': unicode,
-    'postpone_superpower': bool,
+    'can_postpone_expiration': bool,
     'can_delete_submission': bool,
     'maximum_selectable_receivers': int,
     'tip_timetolive': int,
@@ -197,22 +185,23 @@ adminContextDesc = {
     'show_receivers': bool,
     'enable_private_messages': bool,
     'presentation_order': int,
+    'show_receivers_in_alphabetical_order': bool
 }
 
-adminContextFieldTemplateCopy = {
+AdminContextFieldTemplateCopyDesc = {
     'template_id': uuid_regexp,
     'context_id': uuid_regexp,
-    'step_id': uuid_regexp_or_empty,
+    'step_id': uuid_regexp_or_empty
 }
 
-adminReceiverDesc = {
+AdminReceiverDesc = {
     'password': unicode,
     'mail_address': email_regexp,
     'name': unicode,
     'description': unicode,
     'contexts': [uuid_regexp],
     'can_delete_submission': bool,
-    'postpone_superpower': bool,
+    'can_postpone_expiration': bool,
     'tip_notification': bool,
     'ping_notification': bool,
     'pgp_key_remove': bool,
@@ -226,10 +215,10 @@ adminReceiverDesc = {
     'pgp_e2e_private': unicode,
     'presentation_order': int,
     "language": unicode,
-    "timezone": int,
+    "timezone": int
 }
 
-anonNodeDesc = {
+NodeDesc = {
     'name': unicode,
     'description': unicode,
     'presentation': unicode,
@@ -249,7 +238,7 @@ anonNodeDesc = {
     'tor2web_submission': bool,
     'tor2web_receiver': bool,
     'tor2web_unauth': bool,
-    'postpone_superpower': bool,
+    'can_postpone_expiration': bool,
     'can_delete_submission': bool,
     'ahmia': bool,
     'allow_unencrypted': bool,
@@ -261,72 +250,67 @@ anonNodeDesc = {
     'disable_key_code_hint': bool,
     'enable_custom_privacy_badge': bool,
     'custom_privacy_badge_tor': unicode,
-    'custom_privacy_badge_none': unicode,
+    'custom_privacy_badge_none': unicode
 }
 
-adminStats = {
-    'week_delta': int,
-    # 'report_link': unicode,
-}
-
-TipOverview = {
+TipOverviewDesc = {
     'context_id': uuid_regexp,
-    'creation_lifetime': dateType,
+    'creation_lifetime': DateType,
     'receivertips': list,
-    'creation_date': dateType,
+    'creation_date': DateType,
     'context_name': unicode,
     'id': uuid_regexp,
     'wb_access_counter': int,
     'internalfiles': list,
     'comments': list,
     'wb_last_access': unicode,
-    'expiration_date': dateType,
+    'expiration_date': DateType
 }
 
-TipsOverview = [TipOverview]
+TipsOverviewDesc = [TipOverviewDesc]
 
-UserOverview = {
+UserOverviewDesc = {
     'receivertips': list,
     'receiverfiles': list,
     'pgp_key_status': unicode,
     'id': uuid_regexp,
-    'name': unicode,
+    'name': unicode
 }
 
-UsersOverview = [UserOverview]
+UsersOverviewDesc = [UserOverviewDesc]
 
-FileOverview = {
+FileOverviewDesc = {
     'rfiles': int,
     'stored': bool,
     'name': unicode,
     'content_type': unicode,
     'itip': uuid_regexp,
     'path': unicode,
-    'creation_date': dateType,
+    'creation_date': DateType,
     'id': uuid_regexp,
-    'size': int,
+    'size': int
 }
 
-FilesOverview = [FileOverview]
+FilesOverviewDesc = [FileOverviewDesc]
 
-StatsLine = {
+StatsDesc = {
      'file_uploaded': int,
      'new_submission': int,
      'finalized_submission': int,
      'anon_requests': int,
-     'creation_date': dateType,
+     'creation_date': DateType
 }
 
-StatsCollection = [StatsLine]
+StatsCollectionDesc = [StatsDesc]
 
-AnomalyLine = {
+AnomalyDesc = {
      'message': unicode,
-     'creation_date': dateType,
+     'creation_date': DateType
 }
 
-AnomaliesCollection = [AnomalyLine]
+AnomaliesCollectionDesc = [AnomalyDesc]
 
-nodeReceiver = {
+ReceiverDesc = {
      'update_date': unicode,
      'name': unicode,
      'contexts': [uuid_regexp],
@@ -334,25 +318,12 @@ nodeReceiver = {
      'presentation_order': int,
      'pgp_key_status': unicode,
      'id': uuid_regexp,
-     'creation_date': dateType,
+     'creation_date': DateType
 }
 
-nodeReceiverCollection = [nodeReceiver]
+ReceiverCollectionDesc = [ReceiverDesc]
 
-# TODO - TO be removed when migration is complete
-field = {
-    'incremental_number': int,
-    'name': unicode,
-    'hint': unicode,
-    'required': bool,
-    'presentation_order': int,
-    'trigger': list,
-    'key': uuid_regexp,
-    'preview': bool,
-    'type': unicode,
-}
-
-nodeContext = {
+ContextDesc = {
     'select_all_receivers': bool,
     'name': unicode,
     'presentation_order': int,
@@ -366,44 +337,37 @@ nodeContext = {
     'id': uuid_regexp,
     'receivers': [uuid_regexp],
     'submission_disclaimer': unicode,
+    'show_receivers_in_alphabetical_order': bool
 }
 
-nodeContextCollection = [nodeContext]
+ContextCollectionDesc = [ContextDesc]
 
-ahmiaDesc = {
+AhmiaDesc = {
     'description': unicode,
     'language': unicode,
     'title': unicode,
     'contactInformation': unicode,
     'relation': unicode,
     'keywords': unicode,
-    'type': unicode,
+    'type': unicode
 }
 
-staticFile = {
-    'elapsed_time': float,
+StaticFileDesc = {
     'size': int,
     'filelocation': unicode,
     'content_type': unicode,
-    'filename': unicode,
+    'filename': unicode
 }
 
-staticFileCollectionElem = {
-    'size': int,
-    'filename': unicode,
-}
-
-staticFileCollection = [staticFileCollectionElem]
-
-internalTipDesc = {
+InternalTipDesc = {
     'wb_steps': list,
     'receivers': [uuid_regexp],
     'context_id': uuid_regexp,
-    'creation_date': dateType,
+    'creation_date': DateType,
     'new': bool,
     'id': uuid_regexp,
     'files': [uuid_regexp],
-    'expiration_date': dateType,
+    'expiration_date': DateType
 }
 
 FieldDesc = {
@@ -430,7 +394,7 @@ FieldDesc = {
              'fieldgroup)$'),
     'options': list,
     'children': list,
-    'is_template': bool,
+    'is_template': bool
 }
 
 FieldTemplateDesc = {
@@ -456,7 +420,7 @@ FieldTemplateDesc = {
              'fieldgroup)$'),
     'options': list,
     'children': list,
-    'is_template': bool,
+    'is_template': bool
 }
 
 FieldFromTemplateDesc = {
@@ -464,26 +428,26 @@ FieldFromTemplateDesc = {
     'template_id': uuid_regexp
 }
 
-wizardStepDesc = {
+WizardStepDesc = {
     'label': dict,
     'hint': dict,
     'description': dict,
-    'children': list,
+    'children': list
 }
 
-wizardNodeDesc = {
+WizardNodeDesc = {
     'presentation': dict,
-    'footer': dict,
+    'footer': dict
 }
 
-wizardAppdataDesc = {
+WizardAppdataDesc = {
     'version': int,
-    'fields': [wizardStepDesc],
-    'node': wizardNodeDesc,
+    'fields': [WizardStepDesc],
+    'node': WizardNodeDesc
 }
 
-wizardFirstSetup = {
-    'receiver': adminReceiverDesc,
-    'context': adminContextDesc,
-    'node': adminNodeDesc,
+WizardFirstSetupDesc = {
+    'receiver': AdminReceiverDesc,
+    'context': AdminContextDesc,
+    'node': AdminNodeDesc
 }

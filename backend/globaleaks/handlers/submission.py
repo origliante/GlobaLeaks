@@ -1,17 +1,16 @@
 # -*- coding: UTF-8
 #
-#   submission
-#   **********
+# submission
+# **********
 #
-#   Implements a GlobaLeaks submission, then the operations performed
+# Implements a GlobaLeaks submission, then the operations performed
 #   by an HTTP client in /submission URI
 
 import copy
 from globaleaks.third_party.rstr import rstr
 
 from twisted.internet.defer import inlineCallbacks
-
-from globaleaks.settings import transact, transact_ro, GLSetting
+from globaleaks.settings import transact, GLSetting
 from globaleaks.models import Context, InternalTip, Receiver, WhistleblowerTip, \
     Node, InternalFile
 from globaleaks import security
@@ -24,10 +23,10 @@ from globaleaks.utils.utility import log, utc_future_date, datetime_now, datetim
 from globaleaks.rest import errors
 from globaleaks.anomaly import Alarm
 
-def wb_serialize_internaltip(internaltip):
 
+def wb_serialize_internaltip(internaltip):
     response = {
-        'id' : internaltip.id,
+        'id': internaltip.id,
         'context_id': internaltip.context_id,
         'creation_date': datetime_to_ISO8601(internaltip.creation_date),
         'expiration_date': datetime_to_ISO8601(internaltip.expiration_date),
@@ -54,6 +53,7 @@ def hybrid_get_receipt_hash(store):
     return_value_receipt = unicode( rstr.xeger(node.receipt_regexp) )
     receipt_hash = security.hash_password(return_value_receipt, node.receipt_salt)
     return receipt_hash, return_value_receipt
+
 
 @transact
 def create_whistleblower_tip(*args):
@@ -86,16 +86,62 @@ def import_receivers(store, submission, receiver_id_list):
 
         try:
             if not GLSetting.memory_copy.allow_unencrypted and \
-                    receiver.pgp_key_status != u'enabled':
+                            receiver.pgp_key_status != u'enabled':
                 log.err("Encrypted only submissions are supported. Cannot select [%s]" % receiver_id)
                 continue
             submission.receivers.add(receiver)
         except Exception as excep:
-            log.err("Receiver %s can't be assigned to the tip [%s]" % (receiver_id, excep) )
+            log.err("Receiver %s can't be assigned to the tip [%s]" % (receiver_id, excep))
             continue
 
-        log.debug("+receiver [%s] In tip (%s) #%d" %\
-                (receiver.name, submission.id, submission.receivers.count() ) )
+        log.debug("+receiver [%s] In tip (%s) #%d" % \
+                  (receiver.name, submission.id, submission.receivers.count() ))
+
+    if submission.receivers.count() == 0:
+        log.err("Receivers required to be selected, not empty")
+        raise errors.SubmissionFailFields("Needed at least one Receiver selected [2]")
+
+
+def verify_fields_recursively(fields, wb_fields):
+    for f in fields:
+        if f not in wb_fields:
+            raise errors.SubmissionFailFields("missing field (no structure present): %s" % f)
+
+        if fields[f]['required'] and ('value' not in wb_fields[f] or
+                                              wb_fields[f]['value'] == ''):
+            raise errors.SubmissionFailFields("missing required field (no value provided): %s" % f)
+
+        if isinstance(wb_fields[f]['value'], unicode):
+            if len(wb_fields[f]['value']) > GLSetting.memory_copy.maximum_textsize:
+                raise errors.InvalidInputFormat("field value overcomes size limitation")
+
+        indexed_fields = {}
+        for f_c in fields[f]['children']:
+            indexed_fields[f_c['id']] = copy.deepcopy(f_c)
+
+        indexed_wb_fields = {}
+        for f_c in wb_fields[f]['children']:
+            indexed_wb_fields[f_c['id']] = copy.deepcopy(f_c)
+
+        verify_fields_recursively(indexed_fields, indexed_wb_fields)
+
+    for wbf in wb_fields:
+        if wbf not in fields:
+            raise errors.SubmissionFailFields("provided unexpected field %s" % wbf)
+
+
+def verify_steps(steps, wb_steps):
+    indexed_fields = {}
+    for step in steps:
+        for f in step['children']:
+            indexed_fields[f['id']] = copy.deepcopy(f)
+
+    indexed_wb_fields = {}
+    for step in wb_steps:
+        for f in step['children']:
+            indexed_wb_fields[f['id']] = copy.deepcopy(f)
+
+    return verify_fields_recursively(indexed_fields, indexed_wb_fields)
 
 
 def db_create_submission(store, token, request, language):
@@ -185,8 +231,8 @@ class SubmissionCreate(BaseHandler):
     @unauthenticated
     def post(self):
         """
-        Request: wbSubmissionDesc
-        Response: wbSubmissionDesc
+        Request: SubmissionDesc
+        Response: SubmissionDesc
         Errors: ContextIdNotFound, InvalidInputFormat, SubmissionFailFields
 
         This creates an empty submission for the requested context,
@@ -197,22 +243,22 @@ class SubmissionCreate(BaseHandler):
 
         --- has to became:
         Request: empty
-        Response: wbSubmissionDesc + Token
+        Response: SubmissionDesc + Token
         Errors: None
 
         This create a Token, require to complete the submission later
         """
-        request = self.validate_message(self.request.body, requests.wbSubmissionDesc)
+        request = self.validate_message(self.request.body, requests.SubmissionDesc)
 
         token = Token('submission', request['context_id'])
         token.set_difficulty(Alarm().get_token_difficulty())
         token_answer = token.serialize_token()
 
-        token_answer.update({'id': token_answer['token_id'] })
+        token_answer.update({'id': token_answer['token_id']})
         token_answer.update({'context_id': request['context_id']})
         token_answer.update({'human_captcha_answer': 0})
 
-        self.set_status(201) # Created
+        self.set_status(201)  # Created
         self.finish(token_answer)
 
 
@@ -228,11 +274,12 @@ class SubmissionInstance(BaseHandler):
     def put(self, token_id):
         """
         Parameter: token_id
-        Request: wbSubmissionDesc
-        Response: wbSubmissionDesc
+        Request: SubmissionDesc
+        Response: SubmissionDesc
 
         PUT finalize the submission
         """
+
         @transact
         def put_transact(store, token, request):
             status = db_create_submission(store, token, request, self.request.language)
@@ -249,7 +296,7 @@ class SubmissionInstance(BaseHandler):
             db_create_whistleblower_tip(store, request['wb_signature'], status['id'])
             return status
 
-        request = self.validate_message(self.request.body, requests.wbSubmissionDesc)
+        request = self.validate_message(self.request.body, requests.SubmissionDesc)
 
         # the .get method raise an exception if the token is invalid
         token = TokenList.get(token_id)
@@ -263,5 +310,5 @@ class SubmissionInstance(BaseHandler):
 
         TokenList.delete(token_id)
 
-        self.set_status(202) # Updated, also if submission if effectively created (201)
+        self.set_status(202)  # Updated, also if submission if effectively created (201)
         self.finish(status)

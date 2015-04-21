@@ -1,6 +1,6 @@
 GLClient.controller('AdminContextsCtrl',
-  ['$scope', '$modal', 'Admin',
-  function($scope, $modal, Admin) {
+  ['$scope', '$modal',
+  function($scope, $modal) {
 
   $scope.add_context = function (name) {
     context = $scope.admin.new_context();
@@ -26,26 +26,8 @@ GLClient.controller('AdminContextsCtrl',
     $scope.admin.context['delete']({
       context_id: context.id
     }, function(){
-      var idx = _.indexOf($scope.admin.contexts, context);
+      var idx = $scope.admin.contexts.indexOf(context);
       $scope.admin.contexts.splice(idx, 1);
-    });
-  };
-
-  $scope.reorder_contexts_alphabetically = function () {
-    $scope.admin.contexts = _($scope.admin.contexts).sortBy(function (context) {
-      return context.name;
-    });
-
-    $scope.update_contexts_order();
-
-    $scope.save_all();
-  };
-
-  $scope.update_contexts_order = function () {
-    var i = 0;
-    angular.forEach($scope.admin.contexts, function (context, key) {
-      context.presentation_order = i + 1;
-      i += 1;
     });
   };
 
@@ -77,15 +59,6 @@ GLClient.controller('AdminContextsCtrl',
     );
   };
 
-  $scope.sortableOptions = {
-    placeholder: "placeholder",
-    handle: ".handle",
-    axis: 'x',
-    stop: function(e, ui) {
-      $scope.update_contexts_order();
-    }
-  };
-
 }]);
 
 GLClient.controller('AdminContextsEditorCtrl', ['$scope',
@@ -93,17 +66,15 @@ GLClient.controller('AdminContextsEditorCtrl', ['$scope',
 
     $scope.editing = $scope.context.description === undefined;
 
-     $scope.sortableOptions = {
+    $scope.sortableOptions = {
       placeholder: "placeholder",
       handle: ".handle",
       axis: 'x',
       stop: function(e, ui) {
         $scope.contextForm.$dirty = true;
         $scope.contextForm.$pristine = false;
-        $scope.update_contexts_order();
       }
     };
-
    
     $scope.toggleEditing = function () {
       $scope.editing = $scope.editing ^ 1;

@@ -7,12 +7,10 @@ from __future__ import absolute_import
 import copy
 
 from storm.locals import Bool, Int, Reference, ReferenceSet, Unicode, Storm, JSON
-
 from globaleaks.settings import transact
 from globaleaks.utils.utility import datetime_now, datetime_null, uuid4
 from globaleaks.utils.validator import shorttext_v, longtext_v, \
     shortlocal_v, longlocal_v
-
 from .properties import MetaModel, DateTime
 
 def db_forge_obj(store, mock_class, mock_fields):
@@ -149,8 +147,9 @@ class Model(BaseModel):
         return store.find(cls, cls.id == obj_id).one()
 
     @classmethod
-    def delete(self, store):
-        store.remove(self)
+    @classmethod
+    def delete(cls, store):
+        store.remove(cls)
 
 
 class User(Model):
@@ -200,17 +199,20 @@ class Context(Model):
     #                         ReceiverContext.receiver_id,
     #                         Receiver.id)
 
-    postpone_superpower = Bool(default=False)
+    can_postpone_expiration = Bool(default=False)
     can_delete_submission = Bool(default=False)
+
+    show_receivers_in_alphabetical_order = Bool(default=False)
 
     presentation_order = Int(default=9)
 
     unicode_keys = []
     localized_strings = ['name', 'description', 'receiver_introduction']
     int_keys = [ 'maximum_selectable_receivers',
+                 'show_receivers_in_alphabetical_order',
                  'presentation_order' ]
     bool_keys = [ 'select_all_receivers',
-                  'postpone_superpower', 'can_delete_submission',
+                  'can_postpone_expiration', 'can_delete_submission',
                   'show_small_cards', 'show_receivers', "enable_private_messages" ]
 
 
@@ -284,11 +286,11 @@ class ReceiverFile(Model):
     internaltip_id = Unicode()
     internalfile_id = Unicode()
     receiver_id = Unicode()
-    receiver_tip_id = Unicode()
+    receivertip_id = Unicode()
     # internalfile = Reference(ReceiverFile.internalfile_id, InternalFile.id)
     # receiver = Reference(ReceiverFile.receiver_id, Receiver.id)
     # internaltip = Reference(ReceiverFile.internaltip_id, InternalTip.id)
-    # receiver_tip = Reference(ReceiverFile.receiver_tip_id, ReceiverTip.id)
+    # receivertip = Reference(ReceiverFile.receivertip_id, ReceiverTip.id)
 
     file_path = Unicode()
     size = Int()
@@ -366,16 +368,14 @@ class Node(Model):
     This table represent the System-wide settings
     """
     name = Unicode(validator=shorttext_v)
-    public_site = Unicode()
-    hidden_service = Unicode()
-    email = Unicode()
-    receipt_salt = Unicode()
+    public_site = Unicode(validator=shorttext_v)
+    hidden_service = Unicode(validator=shorttext_v)
+    email = Unicode(validator=shorttext_v)
+    receipt_salt = Unicode(validator=shorttext_v)
     last_update = DateTime(default_factory=datetime_null)
-    # this has a dedicated validator in update_node()
-    receipt_regexp = Unicode()
 
     languages_enabled = JSON()
-    default_language = Unicode()
+    default_language = Unicode(validator=shorttext_v)
     default_timezone = Int(default=0)
 
     # localized strings
@@ -384,6 +384,7 @@ class Node(Model):
     footer = JSON(validator=longlocal_v)
     security_awareness_title = JSON(validator=longlocal_v)
     security_awareness_text = JSON(validator=longlocal_v)
+    context_selector_label = JSON(validator=longlocal_v)
 
     # Advanced settings
     maximum_namesize = Int()
@@ -397,8 +398,8 @@ class Node(Model):
     allow_iframes_inclusion = Bool()
 
     # privileges configurable in node/context/receiver
-    postpone_superpower = Bool()
-    can_delete_submission = Bool()
+    can_postpone_expiration = Bool(default=False)
+    can_delete_submission = Bool(default=False)
 
     file_encryption_e2e = Bool(default=True)
     submission_data_e2e = Bool(default=True)
@@ -410,12 +411,12 @@ class Node(Model):
     disable_security_awareness_questions = Bool(default=False)
     disable_key_code_hint = Bool(default=False)
 
-    whistleblowing_question = JSON()
-    whistleblowing_button = JSON()
+    whistleblowing_question = JSON(validator=longlocal_v)
+    whistleblowing_button = JSON(validator=longlocal_v)
 
     enable_custom_privacy_badge = Bool(default=False)
-    custom_privacy_badge_tor = JSON()
-    custom_privacy_badge_none = JSON()
+    custom_privacy_badge_tor = JSON(validator=longlocal_v)
+    custom_privacy_badge_none = JSON(validator=longlocal_v)
 
     header_title_homepage = JSON(validator=longlocal_v)
     header_title_submissionpage = JSON(validator=longlocal_v)
@@ -423,15 +424,20 @@ class Node(Model):
 
     landing_page = Unicode()
 
+    show_contexts_in_alphabetical_order = Bool(default=False)
+
     exception_email = Unicode()
 
     unicode_keys = ['name', 'public_site', 'email', 'hidden_service',
-                    'exception_email', 'default_language', 'receipt_regexp',
+                    'exception_email', 'default_language',
                     'landing_page']
+
     int_keys = ['maximum_namesize', 'maximum_textsize',
-                'maximum_filesize', 'default_timezone']
+                'maximum_filesize', 'default_timezone',
+                'show_contexts_in_alphabetical_order']
+
     bool_keys = ['tor2web_admin', 'tor2web_receiver', 'tor2web_submission',
-                 'tor2web_unauth', 'postpone_superpower',
+                 'tor2web_unauth', 'can_postpone_expiration',
                  'can_delete_submission', 'ahmia', 'allow_unencrypted',
                  'allow_iframes_inclusion',
                  'disable_privacy_badge', 'disable_security_awareness_badge',
@@ -446,7 +452,7 @@ class Node(Model):
                          'whistleblowing_button',
                          'custom_privacy_badge_tor', 'custom_privacy_badge_none',
                          'header_title_homepage', 'header_title_submissionpage',
-                         'header_title_receiptpage']
+                         'header_title_receiptpage', 'context_selector_label']
 
 
 class Notification(Model):
@@ -493,8 +499,8 @@ class Notification(Model):
     plaintext_message_template = JSON(validator=longlocal_v)
     plaintext_message_mail_title = JSON(validator=longlocal_v)
 
-    upcoming_tip_expiration_template = JSON(validator=longlocal_v)
-    upcoming_tip_expiration_mail_title = JSON(validator=longlocal_v)
+    tip_expiration_template = JSON(validator=longlocal_v)
+    tip_expiration_mail_title = JSON(validator=longlocal_v)
 
     admin_pgp_alert_mail_title = JSON(validator=longlocal_v)
     admin_pgp_alert_mail_template = JSON(validator=longlocal_v)
@@ -510,7 +516,7 @@ class Notification(Model):
 
     disable_admin_notification_emails = Bool(default=False)
     disable_receivers_notification_emails = Bool(default=False)
-    send_email_for_every_event = Bool(default=False)
+    send_email_for_every_event = Bool(default=True)
 
     unicode_keys = [
         'server',
@@ -544,8 +550,8 @@ class Notification(Model):
         'encrypted_message_mail_title',
         'plaintext_message_template',
         'plaintext_message_mail_title',
-        'upcoming_tip_expiration_template',
-        'upcoming_tip_expiration_mail_title',
+        'tip_expiration_template',
+        'tip_expiration_mail_title',
         'notification_digest_mail_title',
         'zip_description',
         'ping_mail_template',
@@ -597,8 +603,8 @@ class Receiver(Model):
     ping_mail_address = Unicode()
 
     # Admin chosen options
-    can_delete_submission = Bool()
-    postpone_superpower = Bool()
+    can_delete_submission = Bool(default=False)
+    can_postpone_expiration = Bool(default=False)
 
     last_update = DateTime(default_factory=datetime_null)
 
@@ -617,7 +623,7 @@ class Receiver(Model):
     localized_strings = ['description']
     int_keys = ['presentation_order']
     bool_keys = ['can_delete_submission', 'tip_notification',
-                 'postpone_superpower',
+                 'can_postpone_expiration',
                  'ping_notification']
 
 
@@ -634,9 +640,9 @@ class EventLogs(Model):
 
 
 class Field(Model):
-    label = JSON(validator=shortlocal_v)
+    label = JSON(validator=longlocal_v)
     description = JSON(validator=longlocal_v)
-    hint = JSON(validator=shortlocal_v)
+    hint = JSON(validator=longlocal_v)
 
     multi_entry = Bool()
     required = Bool()
@@ -707,6 +713,7 @@ class FieldOption(Model):
     def __init__(self, attrs=None, localized_keys=None):
         self.attrs = dict()
         self.update(attrs, localized_keys)
+        super(FieldOption, self).__init__()
 
     @classmethod
     def new(cls, store, attrs=None, localized_keys=None):
@@ -860,8 +867,8 @@ ReceiverFile.receiver = Reference(ReceiverFile.receiver_id, Receiver.id)
 ReceiverFile.internaltip = Reference(ReceiverFile.internaltip_id,
                                      InternalTip.id)
 
-ReceiverFile.receiver_tip = Reference(ReceiverFile.receiver_tip_id,
-                                      ReceiverTip.id)
+ReceiverFile.receivertip = Reference(ReceiverFile.receivertip_id,
+                                     ReceiverTip.id)
 
 WhistleblowerTip.internaltip = Reference(WhistleblowerTip.internaltip_id,
                                          InternalTip.id)

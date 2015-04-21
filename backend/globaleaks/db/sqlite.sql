@@ -53,13 +53,14 @@ CREATE TABLE context (
     tip_timetolive INTEGER NOT NULL,
     receiver_introduction BLOB NOT NULL,
     select_all_receivers INTEGER NOT NULL,
-    postpone_superpower INTEGER NOT NULL,
+    can_postpone_expiration INTEGER NOT NULL,
     can_delete_submission INTEGER NOT NULL,
     maximum_selectable_receivers INTEGER,
     show_small_cards INTEGER NOT NULL,
     show_receivers INTEGER NOT NULL,
     enable_private_messages INTEGER NOT NULL,
     presentation_order INTEGER,
+    show_receivers_in_alphabetical_order INTEGER NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -88,12 +89,13 @@ CREATE TABLE receiverfile (
     internalfile_id VARCHAR NOT NULL,
     receiver_id VARCHAR NOT NULL,
     internaltip_id VARCHAR NOT NULL,
-    receiver_tip_id VARCHAR NOT NULL,
+    receivertip_id VARCHAR NOT NULL,
     status VARCHAR NOT NULL CHECK (status IN ('reference', 'encrypted', 'unavailable', 'nokey')),
     new INTEGER  NOT NULL,
     FOREIGN KEY(internalfile_id) REFERENCES internalfile(id) ON DELETE CASCADE,
     FOREIGN KEY(receiver_id) REFERENCES receiver(id) ON DELETE CASCADE,
     FOREIGN KEY(internaltip_id) REFERENCES internaltip(id) ON DELETE CASCADE,
+    FOREIGN KEY(receivertip_id) REFERENCES receivertip(id) ON DELETE CASCADE,
     PRIMARY KEY (id)
 );
 
@@ -119,11 +121,11 @@ CREATE TABLE node (
     footer BLOB NOT NULL,
     security_awareness_title BLOB NOT NULL,
     security_awareness_text BLOB NOT NULL,
+    context_selector_label BLOB NOT NULL,
     whistleblowing_question BLOB NOT NULL,
     whistleblowing_button BLOB NOT NULL,
     email VARCHAR NOT NULL,
     hidden_service VARCHAR NOT NULL,
-    receipt_regexp VARCHAR NOT NULL,
     languages_enabled BLOB NOT NULL,
     default_language VARCHAR NOT NULL,
     default_timezone INTEGER,
@@ -138,7 +140,7 @@ CREATE TABLE node (
     tor2web_submission INTEGER NOT NULL,
     tor2web_receiver INTEGER NOT NULL,
     tor2web_unauth INTEGER NOT NULL,
-    postpone_superpower INTEGER NOT NULL,
+    can_postpone_expiration INTEGER NOT NULL,
     can_delete_submission INTEGER NOT NULL,
     ahmia INTEGER NOT NULL,
     wizard_done INTEGER NOT NULL,
@@ -158,6 +160,7 @@ CREATE TABLE node (
     file_encryption_e2e INTEGER NOT NULL,
     submission_data_e2e INTEGER NOT NULL,
     landing_page VARCHAR NOT NULL CHECK (landing_page IN ('homepage', 'submissionpage')),
+    show_contexts_in_alphabetical_order INTEGER NOT NULL,
     PRIMARY KEY (id)
 );
 
@@ -188,8 +191,8 @@ CREATE TABLE notification (
     encrypted_comment_mail_title BLOB,
     plaintext_comment_template BLOB,
     plaintext_comment_mail_title BLOB,
-    upcoming_tip_expiration_template BLOB,
-    upcoming_tip_expiration_mail_title BLOB,
+    tip_expiration_template BLOB,
+    tip_expiration_mail_title BLOB,
     admin_anomaly_template BLOB,
     admin_anomaly_mail_title BLOB,
     admin_pgp_alert_mail_template BLOB,
@@ -212,7 +215,7 @@ CREATE TABLE receiver (
     configuration VARCHAR NOT NULL CHECK (configuration IN ('default', 'forcefully_selected', 'unselectable')),
     creation_date VARCHAR NOT NULL,
     can_delete_submission INTEGER NOT NULL,
-    postpone_superpower INTEGER NOT NULL,
+    can_postpone_expiration INTEGER NOT NULL,
     description BLOB NOT NULL,
     last_update VARCHAR,
     name VARCHAR NOT NULL,

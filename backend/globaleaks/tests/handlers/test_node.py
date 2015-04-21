@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-from twisted.internet.defer import inlineCallbacks
-
 import json
 
+from twisted.internet.defer import inlineCallbacks
 from globaleaks.rest import requests
 from globaleaks.tests import helpers
 from globaleaks.handlers import node, admin
-from globaleaks.settings import GLSetting
+
 
 class TestNodeInstance(helpers.TestHandlerWithPopulatedDB):
     _handler = node.NodeInstance
@@ -18,7 +17,7 @@ class TestNodeInstance(helpers.TestHandlerWithPopulatedDB):
 
         self.assertTrue(isinstance(self.responses, list))
         self.assertEqual(len(self.responses), 1)
-        self._handler.validate_message(json.dumps(self.responses[0]), requests.anonNodeDesc)
+        self._handler.validate_message(json.dumps(self.responses[0]), requests.NodeDesc)
 
 
 class TestAhmiaDescriptionHandler(helpers.TestHandlerWithPopulatedDB):
@@ -48,7 +47,7 @@ class TestAhmiaDescriptionHandler(helpers.TestHandlerWithPopulatedDB):
         yield handler.get()
         self.assertTrue(isinstance(self.responses, list))
         self.assertEqual(len(self.responses), 1)
-        self._handler.validate_message(json.dumps(self.responses[0]), requests.ahmiaDesc)
+        self._handler.validate_message(json.dumps(self.responses[0]), requests.AhmiaDesc)
 
 
 class TestContextsCollection(helpers.TestHandlerWithPopulatedDB):
@@ -61,7 +60,7 @@ class TestContextsCollection(helpers.TestHandlerWithPopulatedDB):
 
         self.assertTrue(isinstance(self.responses, list))
         self.assertEqual(len(self.responses), 1)
-        self._handler.validate_message(json.dumps(self.responses[0]), requests.nodeContextCollection)
+        self._handler.validate_message(json.dumps(self.responses[0]), requests.ContextCollectionDesc)
 
 
 class TestReceiversCollection(helpers.TestHandlerWithPopulatedDB):
@@ -74,4 +73,4 @@ class TestReceiversCollection(helpers.TestHandlerWithPopulatedDB):
 
         self.assertTrue(isinstance(self.responses, list))
         self.assertEqual(len(self.responses), 1)
-        self._handler.validate_message(json.dumps(self.responses[0]), requests.nodeReceiverCollection)
+        self._handler.validate_message(json.dumps(self.responses[0]), requests.ReceiverCollectionDesc)

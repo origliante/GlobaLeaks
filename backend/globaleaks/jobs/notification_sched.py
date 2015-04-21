@@ -17,15 +17,15 @@ from globaleaks.utils.utility import log, datetime_to_ISO8601
 from globaleaks.models import EventLogs
 
 
-def serialize_receivertip(receiver_tip):
+def serialize_receivertip(receivertip):
     rtip_dict = {
-        'id': receiver_tip.id,
-        'creation_date': datetime_to_ISO8601(receiver_tip.creation_date),
-        'last_access': datetime_to_ISO8601(receiver_tip.last_access),
-        'access_counter': receiver_tip.access_counter,
-        'wb_steps': receiver_tip.internaltip.wb_steps,
-        'context_id': receiver_tip.internaltip.context.id,
-        'expiration_date': datetime_to_ISO8601(receiver_tip.internaltip.expiration_date),
+        'id': receivertip.id,
+        'creation_date': datetime_to_ISO8601(receivertip.creation_date),
+        'last_access': datetime_to_ISO8601(receivertip.last_access),
+        'access_counter': receivertip.access_counter,
+        'wb_steps': receivertip.internaltip.wb_steps,
+        'context_id': receivertip.internaltip.context.id,
+        'expiration_date': datetime_to_ISO8601(receivertip.internaltip.expiration_date),
     }
 
     return rtip_dict
@@ -99,14 +99,17 @@ class EventLogger(object):
         elif self.trigger == 'File':
             self.template_type = u'encrypted_file' if \
                 receiver.pgp_key_status == u'enabled' else u'plaintext_file'
-        elif self.trigger == 'UpcomingExpireTip':
-            self.template_type = u'upcoming_expire'
+        elif self.trigger == 'ExpiringTip':
+            self.template_type = u'upcoming_tip_expiration'
         else:
             raise Exception("self.trigger of unexpected kind ? %s" % self.trigger)
 
         receiver_desc = admin.admin_serialize_receiver(receiver, self.language)
 
         return (receiver.tip_notification, receiver_desc)
+
+    def db_load(self, store):
+        pass
 
     @transact
     def process_events(self, store):
@@ -267,7 +270,7 @@ class FileEventLogger(EventLogger):
                                                     context_desc['id'],
                                                     self.language)
 
-            tip_desc = serialize_receivertip(rfile.receiver_tip)
+            tip_desc = serialize_receivertip(rfile.receivertip)
             file_desc = serialize_internalfile(rfile.internalfile, rfile.id)
             do_mail, receiver_desc = self.import_receiver(rfile.receiver)
 

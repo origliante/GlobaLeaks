@@ -14,8 +14,8 @@ from globaleaks.db import create_tables, clean_untracked_files, check_schema_ver
 from globaleaks.db.datainit import import_memory_variables, apply_cli_options
 
 from globaleaks.jobs import session_management_sched, statistics_sched, \
-                            notification_sched, delivery_sched, cleaning_sched, \
-                            pgp_check_sched, mailflush_sched
+    notification_sched, delivery_sched, cleaning_sched, \
+    pgp_check_sched, mailflush_sched
 
 from globaleaks.settings import GLSetting
 from globaleaks.utils.utility import log, datetime_now

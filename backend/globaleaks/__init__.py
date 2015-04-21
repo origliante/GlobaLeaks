@@ -8,7 +8,7 @@ import operator
 __author__ = u'Random GlobaLeaks Developers'
 __copyright__ = u'Hermes Center for Transparency and Digital Human Rights.'
 __email__ = u'info@globaleaks.org'
-__version__ = u'2.60.64-e2e'
+__version__ = u'2.60.66'
 
 DATABASE_VERSION = 20 # EEE cambia in 21
 
@@ -16,8 +16,11 @@ DATABASE_VERSION = 20 # EEE cambia in 21
 # copy paste format from 'grunt updateTranslations'
 LANGUAGES_SUPPORTED = [
  { "code": "ar", "name": "Arabic" },
+ { "code": "bg", "name": "Bulgarian" },
+ { "code": "bs", "name": "Bosnian" },
  { "code": "ca", "name": "Catalan" },
  { "code": "cs", "name": "Czech" },
+ { "code": "cy", "name": "Welsh" },
  { "code": "de", "name": "German" },
  { "code": "el", "name": "Greek" },
  { "code": "en", "name": "English" },
@@ -30,6 +33,7 @@ LANGUAGES_SUPPORTED = [
  { "code": "hu_HU", "name": "Hungarian (Hungary)" },
  { "code": "it", "name": "Italian" },
  { "code": "ja", "name": "Japanese" },
+ { "code": "ku_IQ", "name": "Kurdish (Iraq)" },
  { "code": "lv", "name": "Latvian" },
  { "code": "nb_NO", "name": "Norwegian Bokmål (Norway)" },
  { "code": "nl", "name": "Dutch" },
@@ -39,6 +43,7 @@ LANGUAGES_SUPPORTED = [
  { "code": "ru", "name": "Russian" },
  { "code": "sk", "name": "Slovak" },
  { "code": "sl_SI", "name": "Slovenian (Slovenia)" },
+ { "code": "sq", "name": "Albanian" },
  { "code": "sr_RS", "name": "Serbian (Serbia)" },
  { "code": "sv", "name": "Swedish" },
  { "code": "th", "name": "Thai" },

@@ -3,7 +3,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
     $scope.started = true;
     $scope.rtl = false;
     $scope.logo = '/static/globaleaks_logo.png';
-    $scope.build_stylesheet = "/styles.css";
+    $scope.build_stylesheet = '/styles.css';
 
     var iframeCheck = function() {
       try {
@@ -11,7 +11,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
       } catch (e) {
         return true;
       }
-    }
+    };
 
     $scope.update = function (model, cb, errcb) {
       var success = {};
@@ -28,7 +28,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
     };
 
     $scope.randomFluff = function () {
-      return Math.round(Math.random() * 1000000);
+      return Math.random() * 1000000 + 1000000;
     };
 
     $scope.isWizard = function () {
@@ -47,11 +47,11 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
     $scope.showLoginForm = function () {
       return (!$scope.isHomepage() &&
               !$scope.isLoginPage());
-    }
+    };
 
     $scope.hasSubtitle = function () {
       return $scope.header_subtitle != '';
-    }
+    };
 
     $scope.open_intro = function () {
       if ($scope.intro_opened) {
@@ -103,14 +103,26 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
       }
     }
 
+    $scope.show_file_preview = function(content_type) {
+      var content_types = [
+        'image/gif',
+        'image/jpeg',
+        'image/png',
+        'image/bmp'
+      ];
+
+      return content_types.indexOf(content_type) > -1;
+    };
+
     var init = function () {
 
       $scope.logo = '/static/globaleaks_logo.png?' + $scope.randomFluff();
+      $scope.build_stylesheet = "/styles.css?" + $scope.randomFluff();
 
       $scope.session_id = Authentication.id;
       $scope.homepage = Authentication.homepage;
       $scope.auth_landing_page = Authentication.auth_landing_page;
-      $scope.role = Authentication.role;
+      $rootScope.role = Authentication.role;
 
       $scope.node = Node.get(function(node, getResponseHeaders) {
 
@@ -121,7 +133,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
           $rootScope.anonymous = true;
         } else {
           if (window.location.protocol === 'https:') {
-             headers = getResponseHeaders();
+             var headers = getResponseHeaders();
              if (headers['x-check-tor'] !== undefined && headers['x-check-tor'] === 'true') {
                $rootScope.anonymous = true;
                if ($scope.node.hidden_service && !iframeCheck()) {
@@ -168,6 +180,12 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
 
     };
 
+    $scope.reload = function() {
+      GLCache.removeAll();
+      init();
+      $route.reload();
+    }
+
     $scope.$on( "$routeChangeStart", function(event, next, current) {
       $scope.route_check();
     });
@@ -183,13 +201,10 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
     });
 
     $scope.$on("REFRESH", function() {
-      GLCache.removeAll();
-      init();
-      $route.reload();
+      $scope.reload();
     });
 
     $rootScope.$watch('language', function (newVal, oldVal) {
-
       if (newVal && newVal !== oldVal) {
 
         if(oldVal === undefined && newVal === $scope.node.default_language)
@@ -197,7 +212,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
 
         $translate.use($rootScope.language);
 
-        if (_.indexOf(["ar", "he", "ur"], newVal) !== -1) {
+        if (["ar", "he", "ur"].indexOf(newVal) !== -1) {
           $scope.rtl = true;
           $scope.build_stylesheet = "/styles-rtl.css";
         } else {
@@ -215,7 +230,6 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
       return Authentication.id;
     }, function (newVal, oldVal) {
       $scope.session_id = Authentication.id;
-      $scope.homepage = Authentication.homepage;
       $scope.auth_landing_page = Authentication.auth_landing_page;
       $scope.role = Authentication.role;
     });
@@ -250,16 +264,6 @@ GLClient.controller('DisableEncryptionCtrl', ['$scope', '$modalInstance', functi
 
 }]);
 
-angular.module('GLClient.fileuploader', ['blueimp.fileupload'])
-  .config(['$httpProvider', 'fileUploadProvider',
-    function ($httpProvider, fileUploadProvider) {
-      delete $httpProvider.defaults.headers.common['X-Requested-With'];
-      angular.extend(fileUploadProvider.defaults, {
-        multipart: false,
-      });
-    }
-]);
-
 GLClient.controller('IntroCtrl', ['$scope', '$rootScope', '$modalInstance', function ($scope, $rootScope, $modalInstance) {
 
   var steps = 3;
@@ -276,21 +280,21 @@ GLClient.controller('IntroCtrl', ['$scope', '$rootScope', '$modalInstance', func
     if ($scope.step < steps) {
       $scope.step += 1;
     }
-  }
+  };
 
   $scope.back = function () {
     if ($scope.step > first_step) {
       $scope.step -= 1;
     }
-  }
+  };
 
   $scope.cancel = function () {
     $modalInstance.close();
-  }
+  };
 
   $scope.data = {
     'language': $scope.language
-  }
+  };
 
   $scope.$watch("data.language", function (newVal, oldVal) {
     if (newVal && newVal !== oldVal) {

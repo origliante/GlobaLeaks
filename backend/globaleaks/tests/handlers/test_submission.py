@@ -1,7 +1,5 @@
 # -*- encoding: utf-8 -*-
 from __future__ import unicode_literals
-import json
-import re
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -11,7 +9,7 @@ from globaleaks.tests import helpers
 from globaleaks.jobs import delivery_sched
 from globaleaks.handlers import authentication, wbtip
 from globaleaks.handlers.admin import create_receiver
-from globaleaks.rest import requests, errors
+from globaleaks.rest import errors
 from globaleaks.models import InternalTip
 from globaleaks.utils.token import Token
 from globaleaks.handlers.submission import create_whistleblower_tip, SubmissionCreate, SubmissionInstance
@@ -75,8 +73,6 @@ class TestSubmission(helpers.TestGLWithPopulatedDB):
 
         receipt = yield create_whistleblower_tip(self.submission_desc)
 
-        self.assertTrue(re.match(GLSetting.defaults.receipt_regexp, receipt))
-
         wb_access_id = yield authentication.login_wb(receipt)
 
         # remind: return a tuple (serzialized_itip, wb_itip)
@@ -116,9 +112,6 @@ class TestSubmission(helpers.TestGLWithPopulatedDB):
         for i in range(0, 6):
             self.assertTrue(self.rfi[i]['status'] in [u'reference', u'encrypted'])
 
-        # verify the checksum returned by whistleblower POV, I'm not using
-        #  wfv = yield tip.get_files_wb()
-        # because is not generated a WhistleblowerTip in this test
         self.wbfls = yield collect_ifile_as_wb_without_wbtip(self.submission_desc['id'])
         self.assertEqual(len(self.wbfls), 3)
 
@@ -127,8 +120,8 @@ class TestSubmission(helpers.TestGLWithPopulatedDB):
         self.submission_desc = yield self.get_dummy_submission(self.dummyContext['id'])
         self.submission_desc = yield self.create_submission(self.submission_desc)
 
-        receiver_tips = yield delivery_sched.tip_creation()
-        self.assertEqual(len(receiver_tips), len(self.submission_desc['receivers']))
+        receivertips = yield delivery_sched.tip_creation()
+        self.assertEqual(len(receivertips), len(self.submission_desc['receivers']))
 
 
     @inlineCallbacks
