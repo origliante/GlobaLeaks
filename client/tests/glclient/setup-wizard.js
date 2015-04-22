@@ -11,8 +11,8 @@ describe('globaLeaks setup wizard', function() {
 
       element(by.model('admin.node.email')).sendKeys('info@globaleaks.org');
 
-      element(by.model('admin.node.password')).sendKeys('Antani1234');
-      element(by.model('admin.node.check_password')).sendKeys('Antani1234');
+      element(by.model('admin.node.password')).sendKeys('qwe2qwe2');
+      element(by.model('admin.node.check_password')).sendKeys('qwe2qwe2');
 
       element(by.model('receiver.name')).sendKeys('Beppa Pigga');
       element(by.model('receiver.mail_address')).sendKeys('info@globaleaks.org');
