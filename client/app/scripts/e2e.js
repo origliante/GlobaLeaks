@@ -241,13 +241,15 @@ angular.module('e2e', []).
           }
           var det_prng = new Seed();
           console.log("det_prng ", det_prng);
+          //var workerAvailable = openpgp.initWorker('/components/openpgpjs/dist/openpgp.worker.js');
+          //openpgp.getWorker().generateKeyPair({
 
           openpgp.generateKeyPair({
             numBits: 2048,
             userId: "wb@antani.gov",
             unlocked: true,
             created: new Date(42),
-            //prng: det_prng
+            prng: det_prng
           }).then(function(keyPair){
             keyPair.key.primaryKey.created = new Date(42);
             keyPair.key.subKeys[0].subKey.created = new Date(42);
