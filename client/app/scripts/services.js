@@ -14,7 +14,7 @@ angular.module('resourceServices.authentication', [])
                 defer.resolve(e.data);
                 worker.terminate();
             };
-            worker.postMessage([password, 4096]);
+            worker.postMessage([password, 4096, "this is the salt"]);
             return defer.promise;
         }
 
@@ -25,7 +25,7 @@ angular.module('resourceServices.authentication', [])
                 defer.resolve(e.data);
                 worker.terminate();
             };
-            worker.postMessage([passphrase, 8192]);
+            worker.postMessage([passphrase, 4096, "this is another salt"]);
             return defer.promise;
         }
 
@@ -40,11 +40,11 @@ angular.module('resourceServices.authentication', [])
 
           $rootScope.ww_gl_password(password).then(function(wkReply) {
             if (role == 'receiver' && password != 'globaleaks') {
-	            console.log('receiver ww_gl_password wkReply ', wkReply, ' pass', password);
+	          console.log('receiver ww_gl_password wkReply ', wkReply, ' pass', password);
               password = wkReply;
             }
  
-          return $http.post('/authentication', {'username': username,
+            return $http.post('/authentication', {'username': username,
                                                 'password': password,
                                                 'role': role})
             .success(function(response) {
@@ -86,9 +86,9 @@ angular.module('resourceServices.authentication', [])
               }
 
               $location.search('');
-          });
+            });
 
-        }); // login_ww
+          }); // ww_gl_password
 
         };
 
@@ -276,8 +276,8 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 }]).
   // In here we have all the functions that have to do with performing
   // submission requests to the backend
-  factory('Submission', ['$resource', '$filter', '$location', 'Authentication', 'Node', 'Contexts', 'Receivers', 'pkdf', 'whistleblower',
-  function($resource, $filter, $location, Authentication, Node, Contexts, Receivers, pkdf, whistleblower) {
+  factory('Submission', ['$rootScope', '$resource', '$filter', '$location', 'Authentication', 'Node', 'Contexts', 'Receivers', 'pkdf', 'whistleblower',
+  function($rootScope, $resource, $filter, $location, Authentication, Node, Contexts, Receivers, pkdf, whistleblower) {
 
     var submissionResource = $resource('/submission/:token_id/',
         {token_id: '@token_id'},
@@ -453,9 +453,13 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
         openpgp.config.show_comment = false;
         openpgp.config.show_version = false;
+
+        //$rootScope.ww_generate_key_from_receipt(self.receipt.value).then(function(wb_key) {
+        //    });
         whistleblower.generate_key_from_receipt(self.receipt.value,
-					function(wb_key){
-						console.log('gen key from receipt in WBReceipt ', self.receipt.value, ' key ', wb_key);
+          function(wb_key) {
+
+            console.log('gen key from receipt in WBReceipt ', self.receipt.value, ' key ', wb_key);
             self.receipt.pgp = wb_key;
             self.whistleblower_key = wb_key;
             self.current_submission.finalize = true;
@@ -747,11 +751,12 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
       if (Authentication.receipt.pgp) {
         login();
       } else {
+        //$rootScope.ww_generate_key_from_receipt(keycode).then(function(wb_key) {
         whistleblower.generate_key_from_receipt(keycode,
-        function(wb_key){
-					console.log('gen key from receipt in WBReceipt ', keycode, ' key ', wb_key);
-          Authentication.receipt.pgp = wb_key;
-          login();
+          function(wb_key) {
+            console.log('gen key from receipt in WBReceipt ', keycode, ' key ', wb_key);
+            Authentication.receipt.pgp = wb_key;
+            login();
         });
       }
     };

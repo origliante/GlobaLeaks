@@ -1,5 +1,5 @@
 angular.module('e2e', []).
-  factory('pkdf', function() {
+  factory('pkdf', ['$q', function($q) {
     return {
       // rounds must be power of 2
       scrypt_hash: function(password, rounds, scrypt) {
@@ -49,8 +49,8 @@ angular.module('e2e', []).
         return key;
       }
     }
-  }).
-  factory('whistleblower', function() {
+  }]).
+  factory('whistleblower', ['$q', function($q) {
     var wb_names = [
       'Samuel Shaw',
       'Edmund Dene Morel',
@@ -210,37 +210,53 @@ angular.module('e2e', []).
     return {
       names: wb_names,
       generate_key_from_receipt: function(receipt, cb) {
-        function Seed() {
-          var self = this,
-            scrypt = scrypt_module_factory(33554432),
-            utf8_pwd = scrypt.encode_utf8(receipt),
-            salt = "This is the salt.";
-          self.offset = 0;
-          self.seed = scrypt.crypto_scrypt(utf8_pwd, salt, 4096,
-                                           8, 1, 128 * 2);
-          function nextBytes(byteArray) {
-            for (var n = 0; n < byteArray.length; n++) {
-              byteArray[n] = self.seed[self.offset % self.seed.length];
-              self.offset += 1;
-            }
-          }
-          this.nextBytes = nextBytes;
+
+        generate_deterministic_seed = function(receipt) {
+            var worker = new Worker('/scripts/wb_keys_ww.js');
+            var defer = $q.defer();
+            worker.onmessage = function(e) {
+                defer.resolve(e.data);
+                worker.terminate();
+            };
+            worker.postMessage([receipt]);
+            return defer.promise;
         }
-        var wb_name = wb_names[Math.floor(Math.random() * wb_names.length)];
-        openpgp.generateKeyPair({
-          numBits: 2048,
-          userId: "wb@antani.gov",
-          unlocked: true,
-          created: new Date(42),
-          prng: new Seed()
-        }).then(function(keyPair){
-          keyPair.key.primaryKey.created = new Date(42);
-          keyPair.key.subKeys[0].subKey.created = new Date(42);
-          cb(keyPair);
+        //var wb_name = wb_names[Math.floor(Math.random() * wb_names.length)];
+
+        generate_deterministic_seed(receipt).then( function(d_seed) {
+          console.log("d_seed ", d_seed);
+
+          function Seed() {
+            var self = this;
+            self.offset = 0;
+            self.seed = d_seed;
+
+            function nextBytes(byteArray) {
+              for (var n = 0; n < byteArray.length; n++) {
+                byteArray[n] = self.seed[self.offset % self.seed.length];
+                self.offset += 1;
+              }
+            }
+            this.nextBytes = nextBytes;
+          }
+          var det_prng = new Seed();
+          console.log("det_prng ", det_prng);
+
+          openpgp.generateKeyPair({
+            numBits: 2048,
+            userId: "wb@antani.gov",
+            unlocked: true,
+            created: new Date(42),
+            //prng: det_prng
+          }).then(function(keyPair){
+            keyPair.key.primaryKey.created = new Date(42);
+            keyPair.key.subKeys[0].subKey.created = new Date(42);
+            cb(keyPair);
+          });
         });
       }
     }
-  }).
+  }]).
   factory('pgp', function() {
     return {
       generate_key: function(cb) {
