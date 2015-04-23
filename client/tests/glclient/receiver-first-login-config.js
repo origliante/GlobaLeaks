@@ -1,6 +1,12 @@
 // conf.js
 exports.config = {
   seleniumAddress: 'http://localhost:4444/wd/hub',
-  specs: [ 'receiver-first-login.js' ]
+  specs: [
+    //'setup-wizard.js',
+    'receiver-first-login.js',
+  ],
+  capabilities: {
+    'browserName': 'firefox' // or 'safari'
+  },
 }
-// specs: [ 'setup-wizard.js', /* 'setup-receivers.js' */ ]
+

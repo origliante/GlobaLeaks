@@ -35,7 +35,7 @@ describe('globaLeaks setup wizard', function() {
       // Edit the advanced settings
       browser.setLocation('admin/advanced_settings');
 
-      element(by.model('admin.node.disable_privacy_badge')).click();
+      //element(by.model('admin.node.disable_privacy_badge')).click();
       element(by.model('admin.node.disable_security_awareness_questions')).click();
 
       element(by.cssContainingText("a", "Tor2web Settings")).click();
