@@ -1,4 +1,15 @@
+function writeScreenShot(data, filename) {
+    var fs = require('fs');
+    var stream = fs.createWriteStream(filename);
+
+    stream.write(new Buffer(data, 'base64'));
+    stream.end();
+}
+
+
+
 describe('globaLeaks setup wizard', function() {
+
   it('should allow the user to setup the wizard', function() {
       browser.get('http://127.0.0.1:8082/');
       
@@ -20,7 +31,7 @@ describe('globaLeaks setup wizard', function() {
       // Disable encryption for receiver
       element(by.model('admin.node.allow_unencrypted')).click();
       element(by.css('[data-ng-click="ok()"]')).click();
-      
+
       element(by.model('context.name')).sendKeys('My Context');
       
       // Complete the form
@@ -28,21 +39,29 @@ describe('globaLeaks setup wizard', function() {
       
       // Make sure the congratulations text is present
       expect(element(by.css('.congratulations')).isPresent()).toBe(true) 
-      
-      // Go to admin interface
-      element(by.css('[data-ng-click="finish()"]')).click();
-      
-      // Edit the advanced settings
-      browser.setLocation('admin/advanced_settings');
 
-      //element(by.model('admin.node.disable_privacy_badge')).click();
-      element(by.model('admin.node.disable_security_awareness_questions')).click();
+      var $rootScope = angular.element(el).injector().get('$rootScope');
+      //TODO: check if $rootScope.errors is empty
+      //var value = element(by.id('foo')).evaluate('variableInScope');
+      //inject(function($controller, rootScope) {
+      //  expect($rootScope.errors).toBe([]);
+      //});
+    });
 
-      element(by.cssContainingText("a", "Tor2web Settings")).click();
+    it('should grant access to the admin interface', function() {
+      browser.get('http://127.0.0.1:8082/admin');
+      element(by.model('loginPassword')).sendKeys('qwe2qwe2');
+      element(by.css('button')).click().then(function () {
+        browser.waitForAngular();
 
-      element(by.model('admin.node.tor2web_receiver')).click();
-      element(by.model('admin.node.tor2web_submission')).click();
-
-      element(by.css('[data-ng-click="updateNode(admin.node)"]')).click();
+        // Edit the advanced settings
+        browser.setLocation('admin/advanced_settings');
+        element(by.model('admin.node.disable_privacy_badge')).click();
+        element(by.model('admin.node.disable_security_awareness_questions')).click();
+        element(by.cssContainingText("a", "Tor2web Settings")).click();
+        element(by.model('admin.node.tor2web_receiver')).click();
+        element(by.model('admin.node.tor2web_submission')).click();
+        element(by.css('[data-ng-click="updateNode(admin.node)"]')).click();
+      });
     });
 });
