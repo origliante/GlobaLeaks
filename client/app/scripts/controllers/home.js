@@ -2,8 +2,8 @@
 
 GLClient.controller('HomeCtrl', ['$scope', '$location', '$modal',
                     'Authentication',
-                    'WhistleblowerTip',
-  function ($scope, $location, $modal, Authentication, WhistleblowerTip) {
+                    'WBReceipt', 'Contexts', 'Receivers',
+  function ($scope, $location, $modal, Authentication, WBReceipt, Contexts, Receivers) {
     $scope.keycode = '';
     $scope.configured = false;
     $scope.step = 1;

@@ -97,6 +97,11 @@
     <script src="components/angular-translate-loader-static-files/angular-translate-loader-static-files.js"></script>
     <script src="components/angular-ui-bootstrap-bower/ui-bootstrap-tpls.js"></script>
     <script src="components/d3/d3.js"></script>
+    <script src="components/FileSaver/FileSaver.js"></script>
+    <script src="components/jszip/dist/jszip.js"></script>
+    <script src="components/openpgpjs/dist/openpgp.js"></script>
+    <script src="components/scrypt/index.js"></script>
+    <script src="scripts/e2e.js"></script>
     <script src="components/flow.js/dist/flow.js"></script>
     <script src="components/ng-flow/dist/ng-flow.js"></script>
     <script src="components/ng-sortable/dist/ng-sortable.js"></script>
@@ -124,6 +129,8 @@
     <script src="scripts/controllers/login.js"></script>
     <script src="scripts/controllers/user.js"></script>
     <script src="scripts/controllers/embedded.js"></script>
+    <script src="scripts/controllers/pgp.js"></script>
+
     <script src="scripts/templates.js"></script>
     <!-- endbuild -->
 
@@ -136,9 +143,23 @@
          document.getElementsByTagName("head")[0].appendChild(fileref)
        }
       }
-        
+
+      function crypto_not_supported() {
+        // Check that web crypto is even available
+        if (!window.crypto || !window.crypto.subtle) {
+          alert("Your browser does not support the Web Cryptography API! This page will not work.");
+          return true;
+        }
+        // Check that encoding API is also available
+        if (!window.TextEncoder || !window.TextDecoder) {
+          alert("Your browser does not support the Encoding API! This page will not work.");
+          return true;
+        }
+        return false;
+      } 
+
       function start_globaleaks() {
-        if (bowser.msie && bowser.version <= 8) {
+        if (bowser.msie && bowser.version <= 8 || crypto_not_supported()) {
           var error = document.getElementById("error_unsupported_browser");
           error.setAttribute("style", "block");
         } else {

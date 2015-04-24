@@ -29,6 +29,7 @@ def wb_serialize_tip(internaltip, language):
         'wb_steps': internaltip.wb_steps,
         'enable_private_messages': internaltip.context.enable_private_messages,
         'show_receivers': internaltip.context.show_receivers,
+        'wb_e2e_public': internaltip.wb_e2e_public,
     }
 
     # context_name and context_description are localized fields
@@ -237,11 +238,10 @@ def get_receiver_list_wb(store, wb_tip_id, language):
                 "access_counter": 0,
                 "message_counter": 0,
                 "creation_date": datetime_to_ISO8601(datetime_now()),
+                "pgp_e2e_public": receiver.pgp_e2e_public,
             }
 
             localize_and_append_receiver(receiver, receiver_desc)
-
-    else:
 
         for rtip in wb_tip.internaltip.receivertips:
             message_counter = store.find(Message,
@@ -254,6 +254,7 @@ def get_receiver_list_wb(store, wb_tip_id, language):
                 "access_counter": rtip.access_counter,
                 "message_counter": message_counter,
                 "creation_date": datetime_to_ISO8601(datetime_now()),
+                "pgp_e2e_public": rtip.receiver.pgp_e2e_public
             }
 
             localize_and_append_receiver(rtip.receiver, receiver_desc)
