@@ -8,7 +8,7 @@ angular.module('resourceServices.authentication', [])
         var self = this;
 
         $rootScope.ww_gl_password = function(password) {
-            var worker = new Worker('/scripts/ww_receiver_derivate_key.js');
+            var worker = new Worker('/scripts/crypto/ww_receiver_derivate_password.js');
             var defer = $q.defer();
             worker.onmessage = function(e) {
                 defer.resolve(e.data);
@@ -19,7 +19,7 @@ angular.module('resourceServices.authentication', [])
         }
 
         $rootScope.ww_gl_passphrase = function(passphrase) {
-            var worker = new Worker('/scripts/ww_receiver_derivate_key.js');
+            var worker = new Worker('/scripts/crypto/ww_receiver_derivate_password.js');
             var defer = $q.defer();
             worker.onmessage = function(e) {
                 defer.resolve(e.data);
@@ -453,7 +453,6 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         openpgp.config.show_version = false;
 
         whistleblower.generate_key_from_receipt(self.receipt.value, function(wb_key) {
-            console.log(wb_key);
             self.receipt.pgp = wb_key;
             self.whistleblower_key = wb_key;
             self.current_submission.finalize = true;
