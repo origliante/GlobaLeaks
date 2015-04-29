@@ -194,10 +194,12 @@ controller('SubmissionFieldCtrl', ['$scope', function ($scope) {
   };
 
 }]).
-controller('ReceiptController', ['$scope', '$location', 'Authentication', 'WBReceipt',
-  function($scope, $location, Authentication, WBReceipt) {
+controller('ReceiptController', ['$scope', '$location', 'Authentication',
+  function($scope, $location, Authentication) {
 
     format_keycode = function(keycode) {
+      var ret = '';
+
       if (keycode && keycode.length == 16) {
         ret =  keycode.substr(0, 4) + ' ' +
                keycode.substr(4, 4) + ' ' +
@@ -208,6 +210,6 @@ controller('ReceiptController', ['$scope', '$location', 'Authentication', 'WBRec
       return ret;
     };
 
-    $scope.keycode = Authentication.receipt.value;
+    $scope.keycode = Authentication.whistleblower_keycode;
     $scope.formatted_keycode = format_keycode($scope.keycode);
 }]);

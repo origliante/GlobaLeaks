@@ -1,5 +1,5 @@
-GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$routeParams', '$location',  '$filter', '$translate', '$modal', 'Authentication', 'Node', 'WhistleblowerTip', 'GLCache',
-  function($scope, $rootScope, $http, $route, $routeParams, $location, $filter, $translate, $modal, Authentication, Node, WhistleblowerTip, GLCache) {
+GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$routeParams', '$location',  '$filter', '$translate', '$modal', 'Authentication', 'Node', 'WBReceipt', 'GLCache',
+  function($scope, $rootScope, $http, $route, $routeParams, $location, $filter, $translate, $modal, Authentication, Node, WBReceipt, GLCache) {
     $scope.started = true;
     $scope.rtl = false;
     $scope.logo = '/static/globaleaks_logo.png';
@@ -209,7 +209,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
 
     $scope.view_tip = function(keycode) {
       keycode = keycode.replace(/\D/g,'');
-      WhistleblowerTip(keycode, function() {
+      WBReceipt(keycode, function() {
         $location.path('/status');
       });
     };
