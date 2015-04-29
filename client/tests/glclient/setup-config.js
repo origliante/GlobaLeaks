@@ -1,20 +1,33 @@
+
 exports.config = {
   seleniumAddress: 'http://localhost:4444/wd/hub',
+
+  troubleshoot: true,
+  directConnect: true,
+
   specs: [
-    'setup-wizard.js',
-    //'setup-receivers.js',
-    //'receiver-first-login.js',
+    'setup-node-devel.js',
+    'setup-receivers.js',
   ],
+
   capabilities: {
-    'browserName': 'chrome' // or 'safari'
+    'browserName': 'chrome'
+    //'browserName': 'firefox',
+    // or 'safari'
   },
-  framework: 'jasmine',
+
+  framework: 'jasmine2',
+
   jasmineNodeOpts: {
-    defaultTimeoutInterval: 30000
+   isVerbose: true,
+   //defaultTimeoutInterval: 30000
   },
+
+  baseUrl: 'http://127.0.0.1:8082/',
 
   onPrepare: function() {
      browser.driver.manage().window().setSize(1200, 600);
   },
 }
+
 
