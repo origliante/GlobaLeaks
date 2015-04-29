@@ -6,7 +6,7 @@ exports.config = {
   directConnect: true,
 
   specs: [
-    //'setup-node-devel.js',
+    'setup-node-devel.js',
     'setup-new-receiver.js',
   ],
 
