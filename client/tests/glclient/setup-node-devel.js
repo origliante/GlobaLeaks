@@ -25,7 +25,7 @@ describe('globaLeaks setup', function() {
         element(by.model('admin.node.password')).sendKeys('qwe2qwe2');
         element(by.model('admin.node.check_password')).sendKeys('qwe2qwe2');
 
-        element(by.model('receiver.name')).sendKeys('Beppa Pigga');
+        element(by.model('receiver.name')).sendKeys('recv1');
         element(by.model('receiver.mail_address')).sendKeys('info@globaleaks.org');
 
         // Disable encryption for receiver

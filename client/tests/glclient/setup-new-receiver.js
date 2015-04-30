@@ -12,8 +12,8 @@ describe('globaLeaks setup receiver(s)', function() {
         browser.setLocation('admin/receivers');
         browser.waitForAngular(); browser.sleep(2000);
 
-        element(by.model('new_receiver.name')).sendKeys('altro');
-        element(by.model('new_receiver.email')).sendKeys('altro@altro.xxx');
+        element(by.model('new_receiver.name')).sendKeys('recv2');
+        element(by.model('new_receiver.email')).sendKeys('recv2@globaleaks.org');
 
         element(by.css('[data-ng-click="add_receiver()"]')).click().then(function() {
         });
