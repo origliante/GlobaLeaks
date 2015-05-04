@@ -30,7 +30,8 @@ describe('globaLeaks first receiver login', function() {
         expect(browser.getLocationAbsUrl()).toBe('http://127.0.0.1:8082/#/receiver/tips');
         browser.sleep(2000);
 
-        /*element(by.id('tipList')).evaluate('ww_gl_passphrase').then(function(val) {
+        /*TODO:
+        element(by.id('tipList')).evaluate('ww_gl_passphrase').then(function(val) {
           console.log(val);
         });*/
 

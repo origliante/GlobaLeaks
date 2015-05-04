@@ -32,7 +32,7 @@
           </div>
           <div data-ng-show="!submission.receivers_selected[receiver.id]">
             <div data-ng-show="receiver.configuration == 'default'">
-              <i class="glyphicon glyphicon-unchecked" popover="{{'Select this receiver' | translate}}" popover-placement="right" popover-trigger="mouseenter"></i>
+              <i id="receiver_checkbox_{{receiver.name}}" class="receiver_checkbox glyphicon glyphicon-unchecked" popover="{{'Select this receiver' | translate}}" popover-placement="right" popover-trigger="mouseenter"></i>
             </div>
             <div data-ng-show="receiver.configuration == 'unselectable'">
               <i class="glyphicon glyphicon-unchecked" popover="{{'This receiver cannot be selected' | translate}}" popover-placement="right" popover-trigger="mouseenter"></i>
@@ -80,7 +80,7 @@
             </div>
             <div data-ng-show="!submission.receivers_selected[receiver.id]">
               <div data-ng-show="receiver.configuration == 'default'">
-                <i class="glyphicon glyphicon-unchecked" popover="{{'Select this receiver' | translate}}" popover-placement="right" popover-trigger="mouseenter"></i>
+                <i id="receiver_checkbox_{{receiver.name}}" class="receiver_checkbox glyphicon glyphicon-unchecked" popover="{{'Select this receiver' | translate}}" popover-placement="right" popover-trigger="mouseenter"></i>
               </div>
               <div data-ng-show="receiver.configuration == 'unselectable'">
                 <i class="glyphicon glyphicon-unchecked" popover="{{'This receiver cannot be selected' | translate}}" popover-placement="right" popover-trigger="mouseenter"></i>

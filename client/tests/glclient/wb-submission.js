@@ -14,7 +14,7 @@ describe('globaLeaks wb submission', function() {
      
   });
 
-  it('should change password from default globaleaks to qwe2qwe2', function() {
+  it('should be able to submit a tip', function() {
     browser.get('http://127.0.0.1:8082/#/submission');
 
     element(by.id('receiver_checkbox_recv1')).click().then(function () {
@@ -24,7 +24,7 @@ describe('globaLeaks wb submission', function() {
             element(by.css('div.checkbox input')).click().then(function() {
               element(by.css('[data-ng-click="submit()"]')).click().then(function() {
 
-                browser.sleep(5000);
+                browser.sleep(7000);
                 expect(browser.getLocationAbsUrl()).toBe('http://127.0.0.1:8082/#/receipt');
 
               });

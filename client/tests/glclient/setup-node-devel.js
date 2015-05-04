@@ -44,10 +44,7 @@ describe('globaLeaks setup', function() {
         });
 
       });
-      /*element(by.css('[data-ng-click="logout()"]')).click().then(function() {
-      });*/
-      //var $rootScope = angular.element(el).injector().get('$rootScope');
-      //TODO: check if $rootScope.errors is empty
+
     });
 
     it('should grant access to the admin interface', function() {
