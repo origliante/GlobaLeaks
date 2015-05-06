@@ -6,11 +6,11 @@ exports.config = {
   directConnect: true,
 
   specs: [
-    'receiver-access-tip.js',
+    'glprocess.js',
   ],
 
   capabilities: {
-    'browserName': 'chrome',
+    'browserName': 'chrome'
   },
 
   framework: 'jasmine2',

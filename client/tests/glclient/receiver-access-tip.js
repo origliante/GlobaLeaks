@@ -19,10 +19,8 @@ describe('globaLeaks receiver tip reading', function() {
       element(by.model('loginPassword')).sendKeys('qwe2qwe2');
       element(by.tagName('button')).click().then(function () {
         browser.sleep(2000);
-        //element(by.id('tipListTableBody')).element(by.tagName('a')).click().then(function() {
-        //FIXME
-        element(by.css('tip_open')).click().then(function() {
-          browser.pause();
+        element(by.css('.btn-success')).click().then(function() {
+          //TODO: check tip text
         });
       });
 

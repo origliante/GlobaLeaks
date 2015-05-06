@@ -1,5 +1,5 @@
 
-describe('globaLeaks wb submission', function() {
+describe('globaLeaks gl process', function() {
   var findByText = function() {
       var using = arguments[0] || document;
       var text = arguments[1];
@@ -19,23 +19,10 @@ describe('globaLeaks wb submission', function() {
   };
   by.addLocator('text', findByText);
 
-  var tip_text = 'test submission 1';
+  var tip_text = 'test GL process';
   var receipt = '';
 
-  it('should redirect to /submission by clicking on the blow the whisle button', function() {
-    browser.get('http://127.0.0.1:8082/#/');
-
-    element(by.css('[data-ng-click="goToSubmission()"]')).click().then(function () {
-      browser.sleep(1000);
-      element(by.css('.btn-warning')).click().then(function () {
-        browser.sleep(2000);
-        expect(browser.getLocationAbsUrl()).toBe('http://127.0.0.1:8082/#/submission');
-      });
-    });
-     
-  });
-
-  it('should be able to submit a tip', function() {
+  it('WB should be able to submit a tip', function() {
     browser.get('http://127.0.0.1:8082/#/submission');
 
     element(by.id('receiver_checkbox_recv1')).click().then(function () {
@@ -56,7 +43,7 @@ describe('globaLeaks wb submission', function() {
     });
   });
 
-  it('should be able to access the submission', function() {
+  it('WB should be able to access the submission', function() {
     browser.get('http://127.0.0.1:8082/#/');
 
     element(by.model('formatted_keycode')).sendKeys( receipt );
@@ -68,6 +55,42 @@ describe('globaLeaks wb submission', function() {
 
   });
 
+  it('RECEIVER should be able to access the submitted tip', function() {
+      browser.get('http://127.0.0.1:8082/login');
+
+      element(by.model('loginUsername')).sendKeys('recv1');
+      element(by.model('loginPassword')).sendKeys('qwe2qwe2');
+      element(by.tagName('button')).click().then(function () {
+        browser.sleep(2000);
+        element(by.css('.btn-success')).click().then(function() {
+          //TODO: check tip text
+        });
+      });
+  });
+
+  it('RECEIVER should be able to send a private message to the WB', function() {
+    expect(1).toBe(0);
+  });
+
+  it('WB should be able to read the private message from the RECEIVER and respond', function() {
+    expect(1).toBe(0);
+  });
+
+  it('WB should be able to attach a new file to the tip', function() {
+    expect(1).toBe(0);
+  });
+
+  it('RECEIVER should be able to download the new attached file', function() {
+    expect(1).toBe(0);
+  });
+
+  it('RECEIVER should be able to postpone a tip', function() {
+    expect(1).toBe(0);
+  });
+
+  it('RECEIVER should be able to delete a tip', function() {
+    expect(1).toBe(0);
+  });
 });
 
 
