@@ -22,9 +22,9 @@ describe('globaLeaks wb submission', function() {
   var tip_text = 'test submission 1';
   var receipt = '';
 
+
   it('should redirect to /submission by clicking on the blow the whisle button', function() {
     browser.get('http://127.0.0.1:8082/#/');
-
     element(by.css('[data-ng-click="goToSubmission()"]')).click().then(function () {
       browser.sleep(1000);
       element(by.css('.btn-warning')).click().then(function () {
@@ -37,7 +37,6 @@ describe('globaLeaks wb submission', function() {
 
   it('should be able to submit a tip', function() {
     browser.get('http://127.0.0.1:8082/#/submission');
-
     element(by.id('receiver_checkbox_recv1')).click().then(function () {
       element(by.css('[data-ng-click="incrementStep()"]')).click().then(function () {
         element(by.tagName('textarea')).sendKeys( tip_text ).then(function () {
@@ -58,14 +57,12 @@ describe('globaLeaks wb submission', function() {
 
   it('should be able to access the submission', function() {
     browser.get('http://127.0.0.1:8082/#/');
-
     element(by.model('formatted_keycode')).sendKeys( receipt );
     element(by.css('[data-ng-click="view_tip(formatted_keycode)"]')).click().then(function () {
-        browser.sleep(7000);
-        //FIXME: by.text custom implementation does not find it
-        expect(element(by.text( tip_text )).isPresent()).toBeTruthy();
+      browser.sleep(7000);
+      //FIXME: by.text custom implementation does not find it
+      expect(element(by.text( tip_text )).isPresent()).toBeTruthy();
     });
-
   });
 
 });

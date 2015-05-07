@@ -7,6 +7,7 @@ exports.config = {
 
   specs: [
     'receiver-first-login.js',
+    //'receiver-access-tip.js',
   ],
 
   capabilities: {
