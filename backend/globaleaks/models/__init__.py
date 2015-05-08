@@ -320,7 +320,7 @@ class InternalFile(Model):
     size = Int()
     new = Int(default=True)
 
-    is_e2e_encrypted = Bool()
+    is_e2e_encrypted = Bool(default=False)
 
 
 class Comment(Model):
