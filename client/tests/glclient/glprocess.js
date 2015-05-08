@@ -1,26 +1,9 @@
 
 describe('globaLeaks gl process', function() {
-  var findByText = function() {
-      var using = arguments[0] || document;
-      var text = arguments[1];
-      var matches = [];
-      function addMatchingLeaves(element) {
-        if (element.children) {
-          if (element.children.length === 0 && element.textContent.match(text)) {
-            matches.push(element);
-          }
-          for (var i = 0; i < element.children.length; ++i) {
-            addMatchingLeaves(element.children[i]);
-          }
-        }
-      }
-      addMatchingLeaves(using);
-      return matches;
-  };
-  by.addLocator('text', findByText);
-
   var tip_text = 'test GL process';
   var receipt = '';
+  var test_message = 'test message';
+  var test_message_response = 'test message response';
 
   var login_wb = function() {
     browser.get('http://127.0.0.1:8082/#/');
@@ -58,19 +41,18 @@ describe('globaLeaks gl process', function() {
     });
   });
 
-  it('WB should be able to access the submission', function() {
-    login_wb().then(function () {
-      browser.sleep(7000);
-      //FIXME: by.text custom implementation does not find it
-      expect(element(by.text( tip_text )).isPresent()).toBeTruthy();
+  it('WB should be able to access the submitted tip', function() {
+    browser.get('http://127.0.0.1:8082/#/');
+    element(by.model('formatted_keycode')).sendKeys( receipt ); element(by.css('[data-ng-click="view_tip(formatted_keycode)"]')).click().then(function () {
+      browser.sleep(10000);
+      expect(element( by.xpath("//*[contains(text(),'" + tip_text + "')]") ).getText()).toEqual(tip_text);
     });
   });
 
   it('RECEIVER should be able to access the submitted tip', function() {
     login_receiver().then(function () {
       element(by.css('.btn-success')).click().then(function() {
-        //TODO: check tip text
-        expect(1).toBe(0);
+        expect(element(by.xpath("//*[contains(text(),'" + tip_text + "')]") ).getText()).toEqual(tip_text);
       });
     });
   });
@@ -78,16 +60,27 @@ describe('globaLeaks gl process', function() {
   it('RECEIVER should be able to send a private message to the WB', function() {
     login_receiver().then(function () {
       element(by.css('.btn-success')).click().then(function() {
-        //TODO: send priv message
-        expect(1).toBe(0);
+        element(by.model('tip.newMessageContent')).sendKeys(test_message);
+        element(by.css('[data-ng-click="newMessage()"]')).click().then(function() {
+          element(by.css('.preformatted')).getText().then(function(newMsg) {
+            expect(newMsg).toContain('-----BEGIN PGP MESSAGE-----');
+          });
+        });
       });
     });
   });
 
   it('WB should be able to read the private message from the RECEIVER and respond', function() {
     login_wb().then(function () {
-      //TODO: read priv mess and send it
-      expect(1).toBe(0);
+      element(by.id('recv_message_content')).getText().then(function(message) {
+        expect(message).toEqual(test_message);
+      });
+      element(by.model('tip.newMessageContent')).sendKeys(test_message_response);
+      element(by.css('[data-ng-click="newMessage()"]')).click().then(function() {
+        element(by.css('.preformatted')).getText().then(function(newMsg) {
+          expect(newMsg).toContain('-----BEGIN PGP MESSAGE-----');
+        });
+      });
     });
   });
 
@@ -110,8 +103,11 @@ describe('globaLeaks gl process', function() {
   it('RECEIVER should be able to postpone a tip', function() {
     login_receiver().then(function () {
       element(by.css('.btn-success')).click().then(function() {
-        //TODO: postpone a tip
-        expect(1).toBe(0);
+        element(by.css('[data-ng-show="tip.can_postpone_expiration"]')).element(by.tagName('i')).click().then(function () {
+          element(by.css('.modal-footer')).element(by.css('.btn-danger')).click().then(function() {
+            //TODO: check new date
+          });
+        });
       });
     });
   });
@@ -119,8 +115,11 @@ describe('globaLeaks gl process', function() {
   it('RECEIVER should be able to delete a tip', function() {
     login_receiver().then(function () {
       element(by.css('.btn-success')).click().then(function() {
-        //TODO: delete a tip
-        expect(1).toBe(0);
+        element(by.css('[data-ng-show="tip.can_delete_submission"]')).element(by.tagName('span')).click().then(function () {
+          element(by.css('.modal-footer')).element(by.css('.btn-danger')).click().then(function() {
+            //TODO: check if list is shorter
+          });
+        });
       });
     });
   });
