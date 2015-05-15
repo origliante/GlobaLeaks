@@ -1,0 +1,54 @@
+<!--[if lt IE 7]>      <html lang="en" ng-app="myApp" class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html lang="en" ng-app="myApp" class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html lang="en" ng-app="myApp" class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" ng-app="appname"> <!--<![endif]-->
+<head>
+
+<script>
+
+function get_browser_info(){
+    var ua=navigator.userAgent,tem,M=ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || []; 
+    if(/trident/i.test(M[1])){
+        tem=/\brv[ :]+(\d+)/g.exec(ua) || []; 
+        return {name:'IE ',version:(tem[1]||'')};
+        }   
+    if(M[1]==='Chrome'){
+        tem=ua.match(/\bOPR\/(\d+)/)
+        if(tem!=null)   {return {name:'Opera', version:tem[1]};}
+        }   
+    M=M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
+    if((tem=ua.match(/version\/(\d+)/i))!=null) {M.splice(1,1,tem[1]);}
+    return {
+      name: M[0],
+      version: M[1]
+    };
+ }
+
+function is_browser_supported(){
+  var minreq = new Array();
+  minreq['Chrome'] = 37;
+  minreq['IE'] = 11;
+  minreq['Firefox'] = 36;
+  minreq['Safari'] = 8;
+
+  var binfo = get_browser_info();
+  if (binfo.version < minreq[binfo.name]) {
+    return false;
+  }
+  return true;
+}
+
+var binfo = get_browser_info();
+var bstr = "Name: " + binfo.name + " Version: " + binfo.version;
+console.log(bstr);
+alert(bstr);
+alert("is browser supported? " + is_browser_supported());
+
+</script>
+
+</head>
+<body>
+
+
+</body>
+</html>
