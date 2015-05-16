@@ -274,6 +274,7 @@ def admin_serialize_receiver(receiver, language):
         'username': receiver.user.username,
         'mail_address': receiver.mail_address,
         'ping_mail_address': receiver.ping_mail_address,
+<<<<<<< HEAD
         'password': u'',
         'state': receiver.user.state,
         'configuration': receiver.configuration,
@@ -293,6 +294,30 @@ def admin_serialize_receiver(receiver, language):
         'language': receiver.user.language,
         'timezone': receiver.user.timezone,
         'password_change_needed': receiver.user.password_change_needed
+=======
+        "password": u"",
+        "state": receiver.user.state,
+        "configuration": receiver.configuration,
+        "contexts": [c.id for c in receiver.contexts],
+        "gpg_key_info": receiver.gpg_key_info,
+        "gpg_key_armor": receiver.gpg_key_armor,
+        "gpg_key_remove": False,
+        "gpg_key_fingerprint": receiver.gpg_key_fingerprint,
+        "gpg_key_expiration": datetime_to_ISO8601(receiver.gpg_key_expiration),
+        "gpg_key_status": receiver.gpg_key_status,
+        "pgp_key_armor_priv": receiver.pgp_key_armor_priv,
+        "pgp_glkey_pub": receiver.pgp_glkey_pub,
+        "pgp_glkey_priv": receiver.pgp_glkey_priv,
+        "comment_notification": receiver.comment_notification,
+        "tip_notification": receiver.tip_notification,
+        "file_notification": receiver.file_notification,
+        "message_notification": receiver.message_notification,
+        "ping_notification": receiver.ping_notification,
+        "presentation_order": receiver.presentation_order,
+        "language": receiver.user.language,
+        "timezone": receiver.user.timezone,
+        "password_change_needed": receiver.user.password_change_needed
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     }
 
     return get_localized_values(ret_dict, receiver, receiver.localized_strings, language)

@@ -28,12 +28,25 @@ def wb_serialize_internaltip(internaltip):
     response = {
         'id': internaltip.id,
         'context_id': internaltip.context_id,
+<<<<<<< HEAD
         'creation_date': datetime_to_ISO8601(internaltip.creation_date),
         'expiration_date': datetime_to_ISO8601(internaltip.expiration_date),
         'wb_steps': internaltip.wb_steps,
         'files': [f.id for f in internaltip.internalfiles],
         'receivers': [r.id for r in internaltip.receivers],
         'wb_e2e_public': internaltip.wb_e2e_public
+=======
+        'creation_date' : datetime_to_ISO8601(internaltip.creation_date),
+        'expiration_date' : datetime_to_ISO8601(internaltip.expiration_date),
+        'wb_steps' : internaltip.wb_steps,
+        'download_limit' : internaltip.download_limit,
+        'access_limit' : internaltip.access_limit,
+        'mark' : internaltip.mark,
+        'files' : [f.id for f in internaltip.internalfiles],
+        'receivers' : [r.id for r in internaltip.receivers],
+        'pgp_glkey_pub': internaltip.pgp_glkey_pub,
+        'pgp_glkey_priv': internaltip.pgp_glkey_priv
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     }
 
     return response
@@ -199,7 +212,16 @@ def db_create_submission(store, token, request, language):
 
     try:
         wb_steps = request['wb_steps']
+<<<<<<< HEAD
         steps = db_get_context_steps(store, context.id, language)
+=======
+
+        #TODO: e2e - move verify_steps in the receiver frontend js code 
+        if finalize:
+            steps = db_get_context_steps(store, context.id, language)
+            #verify_steps(steps, wb_steps)
+
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
         submission.wb_steps = wb_steps
     except Exception as excep:
         log.err("Submission create: fields validation fail: %s" % excep)
@@ -214,6 +236,85 @@ def db_create_submission(store, token, request, language):
     submission_dict = wb_serialize_internaltip(submission)
     return submission_dict
 
+<<<<<<< HEAD
+=======
+@transact
+def create_submission(*args):
+    return db_create_submission(*args)
+
+def db_update_submission(store, submission_id, request, finalize, language):
+    context = store.find(Context, Context.id == unicode(request['context_id'])).one()
+    if not context:
+        log.err("Context requested: [%s] not found!" % request['context_id'])
+        raise errors.ContextIdNotFound
+
+    submission = store.find(InternalTip, InternalTip.id == unicode(submission_id)).one()
+    if not submission:
+        log.err("Invalid Submission requested %s in PUT" % submission_id)
+        raise errors.SubmissionIdNotFound
+
+    # this may happen if a submission try to update a context
+    if submission.context_id != context.id:
+        log.err("Can't be changed context in a submission update")
+        raise errors.ContextIdNotFound()
+
+    if submission.mark != u'submission':
+        log.err("Submission %s do not permit update (status %s)" % (submission_id, submission.mark))
+        raise errors.SubmissionConcluded
+
+    try:
+        import_files(store, submission, request['files'])
+    except Exception as excep:
+        log.err("Submission update: files import fail: %s" % excep)
+        log.exception(excep)
+        raise excep
+
+    try:
+        wb_steps = request['wb_steps']
+        if finalize:
+            steps = db_get_context_steps(store, context.id, language)
+            #TODO: move to client code
+            #verify_steps(steps, wb_steps)
+
+        submission.wb_steps = wb_steps
+    except Exception as excep:
+        log.err("Submission update: fields validation fail: %s" % excep)
+        log.exception(excep)
+        raise excep
+
+    try:
+        import_receivers(store, submission, request['receivers'], required=finalize)
+    except Exception as excep:
+        log.err("Submission update: receiver import fail: %s" % excep)
+        log.exception(excep)
+        raise excep
+
+    if finalize:
+        submission.mark = u'finalize'  # Finalized
+
+        #TODO: validation
+        submission.pgp_glkey_pub = request['pgp_glkey_pub']
+        submission.pgp_glkey_priv = request['pgp_glkey_priv']
+    else:
+        submission.mark = u'submission' # Submission
+
+    submission_dict = wb_serialize_internaltip(submission)
+    return submission_dict
+
+@transact
+def update_submission(*args):
+    return db_update_submission(*args)
+
+@transact_ro
+def get_submission(store, submission_id):
+    submission = store.find(InternalTip, InternalTip.id == unicode(submission_id)).one()
+
+    if not submission:
+        log.err("Invalid Submission requested %s in GET" % submission_id)
+        raise errors.SubmissionIdNotFound
+
+    return wb_serialize_internaltip(submission)
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
 @transact
 def create_submission(store, token, request, language):

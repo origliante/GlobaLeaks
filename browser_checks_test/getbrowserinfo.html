@@ -32,10 +32,10 @@ function is_browser_supported(){
   minreq['Safari'] = 8;
 
   var binfo = get_browser_info();
-  if (binfo.version < minreq[binfo.name]) {
-    return false;
+  if (binfo.version >= minreq[binfo.name]) {
+    return true;
   }
-  return true;
+  return false;
 }
 
 var binfo = get_browser_info();

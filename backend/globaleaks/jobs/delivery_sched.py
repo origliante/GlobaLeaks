@@ -136,7 +136,12 @@ def fsops_pgp_encrypt(fpath, recipient_pgp):
     gpoj = GLBPGP()
 
     try:
+<<<<<<< HEAD
         gpoj.load_key(recipient_pgp['pgp_key_public'])
+=======
+        pub_key = recipient_gpg['gpg_key_armor']
+        gpoj.load_key(pub_key)
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
         filepath = os.path.join(GLSetting.submission_path, fpath)
 

@@ -49,8 +49,11 @@ def rfc822_date():
     nowtimestamp = timegm(nowtuple)
     return mailutils.formatdate(nowtimestamp)
 
+
+
+
 def sendmail(authentication_username, authentication_password, from_address,
-             to_address, message_file, smtp_host, smtp_port, security, event=None):
+             to_address, message_file, smtp_host, smtp_port, security, event=None, notif_retries=2, notif_timeout=10, result_debug_callback=None):
     """
     Sends an email using SMTPS/SMTP+TLS and torify the connection
 
@@ -64,11 +67,16 @@ def sendmail(authentication_username, authentication_password, from_address,
     @param security: may need to be STRING, here is converted at start
     @param event: the event description, needed to keep track of failure/success
     """
+<<<<<<< HEAD
 
     notif_retries = 2
     notif_timeout = 10
 
     def printError(method, reason, event):
+=======
+    def printError(method, reason, event):
+        # XXX is catch a wrong TCP port, but not wrong SSL protocol, here
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
         if event:
             log.err("** failed notification within event %s" % event.type)
 
@@ -78,7 +86,11 @@ def sendmail(authentication_username, authentication_password, from_address,
             log.debug(reason)
 
     def esmtp_errback(reason, *args, **kwargs):
+<<<<<<< HEAD
         printError("ESMTP", reason, event)
+=======
+        printError("esmtp", reason, event)
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
         return result_deferred.errback(reason)
 
     def socks_errback(reason, *args, **kwargs):
@@ -90,7 +102,11 @@ def sendmail(authentication_username, authentication_password, from_address,
         return result_deferred.errback(reason)
 
     def result_errback(reason, *args, **kwargs):
+<<<<<<< HEAD
         """To not report an error as unexpected in the log files"""
+=======
+        "To not report an error as unexpected in the log files"
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
         return True
 
     def esmtp_sendError(self, exc):
@@ -103,17 +119,32 @@ def sendmail(authentication_username, authentication_password, from_address,
                 if key in smtp_errors:
                     error_str +=  " " + smtp_errors[key]
 
+<<<<<<< HEAD
             verb = '[unknown]'
+=======
+            verb = 'unknown_verb'
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
             if 'authentication' in exc.resp:
                 verb = 'autenticate'
             if 'not support secure' in exc.resp:
                 verb = 'negotiate TLS'
 
+<<<<<<< HEAD
             log.err("Failed to %s to %s:%d (SMTP Code: %.3d) (%s)" %
                     (verb, smtp_host, smtp_port, exc.code, error_str))
 
         SMTPClient.sendError(self, exc)
 
+=======
+            log.err("Failed to %s to %s:%d (SMTP Code: %.3d) (%s)"
+                    % (verb, smtp_host, smtp_port, exc.code, exc.resp))
+            log.debug("Failed to %s to %s:%d (SMTP Code: %.3d) (%s)"
+                    % (verb, smtp_host, smtp_port, exc.code, exc.resp))
+        #???
+        SMTPClient.sendError(self, exc)
+
+
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     def esmtp_connectionLost(self, reason=protocol.connectionDone):
         """We are no longer connected"""
         if isinstance(reason, Failure):
@@ -129,10 +160,18 @@ def sendmail(authentication_username, authentication_password, from_address,
         self.setTimeout(None)
         self.mailFile = None
 
+<<<<<<< HEAD
     # TODO: validation?
     if from_address == '' or to_address == '':
         log.err("Failed to init sendmail to %s:%s (Invalid from/to addresses)" %
                 (from_address, to_address))
+=======
+
+    #TODO: validation?
+    if from_address == '' or to_address == '':
+        log.err("Failed to init sendmail to %s:%s (Invalid from/to addresses)"
+                 % (from_address, to_address))
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
         return
 
     if security != "SSL" and security != "disabled":
@@ -141,9 +180,9 @@ def sendmail(authentication_username, authentication_password, from_address,
         requireTransportSecurity = False
 
     try:
-        security = str(security)
         result_deferred = Deferred()
         result_deferred.addErrback(result_errback, event)
+<<<<<<< HEAD
 
         context_factory = ClientContextFactory()
 
@@ -161,6 +200,13 @@ def sendmail(authentication_username, authentication_password, from_address,
         #
         context_factory.method = SSL.SSLv23_METHOD
 
+=======
+        if result_debug_callback:
+            result_deferred.addCallback(result_debug_callback)
+
+        context_factory = ClientContextFactory()
+        context_factory.method = SSL.SSLv3_METHOD
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
         esmtp_deferred = Deferred()
         esmtp_deferred.addErrback(esmtp_errback, event)
         esmtp_deferred.addCallback(result_deferred.callback)
@@ -193,7 +239,11 @@ def sendmail(authentication_username, authentication_password, from_address,
         return fail()
 
     try:
+<<<<<<< HEAD
         if not GLSetting.disable_email_torification and GLSetting.memory_copy.notif_uses_tor:
+=======
+        if GLSetting.tor_socks_enable:
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
             socksProxy = TCP4ClientEndpoint(reactor, GLSetting.socks_host, GLSetting.socks_port, timeout=notif_timeout)
             endpoint = SOCKS5ClientEndpoint(smtp_host.encode('utf-8'), smtp_port, socksProxy)
             d = endpoint.connect(factory)
@@ -202,9 +252,12 @@ def sendmail(authentication_username, authentication_password, from_address,
             endpoint = TCP4ClientEndpoint(reactor, smtp_host, smtp_port, timeout=notif_timeout)
             d = endpoint.connect(factory)
             d.addErrback(tcp4_errback, event)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     except Exception as excep:
-        # we strongly need to avoid raising exception inside email logic to avoid chained errors
-        log.err("unexpected exception in sendmail: %s" % str(excep))
+        log.err("Error in endpoint init/connect - unexpected exception in sendmail: %s" % str(excep))
         return fail()
 
     return result_deferred

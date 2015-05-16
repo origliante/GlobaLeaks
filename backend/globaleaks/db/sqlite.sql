@@ -223,6 +223,7 @@ CREATE TABLE receiver (
     ping_notification INTEGER NOT NULL,
     mail_address VARCHAR NOT NULL,
     ping_mail_address VARCHAR NOT NULL,
+<<<<<<< HEAD
     pgp_key_status VARCHAR NOT NULL CHECK (pgp_key_status IN ('disabled', 'enabled')),
     pgp_key_info VARCHAR,
     pgp_key_fingerprint VARCHAR,
@@ -231,6 +232,16 @@ CREATE TABLE receiver (
     pgp_key_private VARCHAR,
     pgp_e2e_public VARCHAR,
     pgp_e2e_private VARCHAR,
+=======
+    gpg_key_status VARCHAR NOT NULL CHECK (gpg_key_status IN ('disabled', 'enabled')),
+    gpg_key_info VARCHAR,
+    gpg_key_fingerprint VARCHAR,
+    gpg_key_armor VARCHAR,
+    pgp_key_armor_priv VARCHAR,
+    gpg_key_expiration INTEGER,
+    pgp_glkey_pub VARCHAR,
+    pgp_glkey_priv VARCHAR,
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     presentation_order INTEGER,
     PRIMARY KEY (id),
     UNIQUE (name),

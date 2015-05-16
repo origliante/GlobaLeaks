@@ -291,8 +291,62 @@ class GLBPGP(object):
             log.err("Critical, OS error in operating with GnuPG home: %s" % ose)
             raise
         except Exception as excep:
+<<<<<<< HEAD
             log.err("Unable to instance PGP object: %s" % excep)
             raise
+=======
+            log.err("Unable to instance GPG object: %s" % excep)
+            raise excep
+
+    def sanitize_gpg_string(self, key):
+        """
+        @param key: A pgp armored key
+        @return: Sanitized string or raise InvalidInputFormat
+
+        This function validate the integrity of a GPG key
+        """
+        lines = key.split("\n")
+        sanitized = ""
+        return key
+
+        start = 0
+        if not len(lines[start]):
+            start += 1
+
+        if lines[start] != '-----BEGIN PGP PUBLIC KEY BLOCK-----':
+            raise errors.InvalidInputFormat("GPG invalid format")
+        else:
+            sanitized += lines[start] + "\n"
+
+        i = 0
+        while i < len(lines):
+
+            # the C language has left some archetypes in my code
+            # [ITA] https://www.youtube.com/watch?v=7jI4DnRJP3k
+            i += 1
+
+            try:
+                if len(lines[i]) < 2:
+                    continue
+            except IndexError:
+                continue
+
+            main_content = re.compile(r"^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$", re.UNICODE)
+            base64only = main_content.findall(lines[i])
+
+            if len(base64only) == 1:
+                sanitized += str(base64only[0]) + "\n"
+
+            # this GPG/PGP format it's different from the common base64 ? dunno
+            if len(lines[i]) == 5 and lines[i][0] == '=':
+                sanitized += str(lines[i]) + "\n"
+
+            if lines[i] == '-----END PGP PUBLIC KEY BLOCK-----':
+                sanitized += lines[i] + "\n"
+                return sanitized
+
+        raise errors.InvalidInputFormat("Malformed PGP key block")
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
     def load_key(self, key):
         """
@@ -411,4 +465,87 @@ class GLBPGP(object):
         try:
             shutil.rmtree(self.pgph.gnupghome)
         except Exception as excep:
+<<<<<<< HEAD
             log.err("Unable to clean temporary PGP environment: %s: %s" % (self.pgph.gnupghome, excep))
+=======
+            log.err("Unable to clean temporary GPG environment: %s: %s" % (self.gpgh.gnupghome, excep))
+
+
+def gpg_options_parse(receiver, request):
+    """
+    This is called in a @transact, when receiver update prefs and
+    when admin configure a new key (at the moment, Admin GUI do not
+    permit to sets preferences, but still the same function is
+    used.
+
+    @param receiver: the Storm object
+    @param request: the Dict receiver by the Internets
+    @return: None
+
+    This function is called in create_recever and update_receiver
+    and is used to manage the GPG options forced by the administrator
+
+    This is needed also because no one of these fields are
+    *enforced* by unicode_keys or bool_keys in models.Receiver
+
+    GPG management, here are check'd these actions:
+    1) Proposed a new GPG key, is imported to check validity, and
+       stored in Storm DB if not error raise
+    2) Removal of the present key
+
+    Further improvement: update the keys using keyserver
+    """
+
+    new_pub_key = request.get('gpg_key_armor', None)
+    new_priv_key = request.get('pgp_key_armor_priv', None)
+    remove_key = request.get('gpg_key_remove', False)
+
+    # the default
+    receiver.gpg_key_status = u'disabled'
+
+    if remove_key:
+        log.debug("User %s %s request to remove GPG key (%s)" %
+                  (receiver.name, receiver.user.username, receiver.gpg_key_fingerprint))
+
+        # In all the cases below, the key is marked disabled as request
+        receiver.gpg_key_status = u'disabled'
+        receiver.gpg_key_info = None
+        receiver.gpg_key_armor = None
+        receiver.pgp_key_armor_priv = None
+        receiver.gpg_key_fingerprint = None
+        receiver.gpg_key_expiration = datetime_null()
+
+    if new_pub_key and new_priv_key:
+
+        try:
+            gnob = GLBGPG()
+
+            result = gnob.load_key(new_pub_key)
+
+            log.debug("GPG Key imported: %s" % result['fingerprint'])
+
+            receiver.gpg_key_status = u'enabled'
+            receiver.gpg_key_info = result['info']
+            receiver.gpg_key_armor = new_pub_key
+            receiver.pgp_key_armor_priv = new_priv_key
+            receiver.gpg_key_fingerprint = result['fingerprint']
+            receiver.gpg_key_expiration = result['expiration']
+
+        except:
+            raise
+
+        finally:
+            # the finally statement is always called also if
+            # except contains a return or a raise
+            gnob.destroy_environment()
+
+
+def access_tip(store, user_id, tip_id):
+    rtip = store.find(ReceiverTip, ReceiverTip.id == unicode(tip_id),
+                      ReceiverTip.receiver_id == user_id).one()
+
+    if not rtip:
+        raise errors.TipIdNotFound
+
+    return rtip
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235

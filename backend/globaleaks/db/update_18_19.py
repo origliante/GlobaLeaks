@@ -2,6 +2,7 @@
 
 """
   Changes
+<<<<<<< HEAD
     - node: header_title_receiptpage
 
 """
@@ -13,6 +14,17 @@ from globaleaks.models import Model
 from globaleaks.utils.utility import every_language
 
 class Node_v_18(Model):
+=======
+    - node: allow_iframes_inclusion
+
+"""
+
+from storm.locals import Int, Bool, Unicode, DateTime, JSON, ReferenceSet
+from globaleaks.db.base_updater import TableReplacer
+from globaleaks.models import Model
+
+class Node_v_17(Model):
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     __storm_table__ = 'node'
     name = Unicode()
     public_site = Unicode()
@@ -38,7 +50,10 @@ class Node_v_18(Model):
     tor2web_receiver = Bool()
     tor2web_unauth = Bool()
     allow_unencrypted = Bool()
+<<<<<<< HEAD
     allow_iframes_inclusion = Bool()
+=======
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     postpone_superpower = Bool()
     can_delete_submission = Bool()
     ahmia = Bool()
@@ -49,6 +64,10 @@ class Node_v_18(Model):
     whistleblowing_question = JSON()
     whistleblowing_button = JSON()
     enable_custom_privacy_badge = Bool()
+<<<<<<< HEAD
+=======
+    custom_privacy_badge_tbb = JSON()
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     custom_privacy_badge_tor = JSON()
     custom_privacy_badge_none = JSON()
     header_title_homepage = JSON()
@@ -57,6 +76,7 @@ class Node_v_18(Model):
     exception_email = Unicode()
 
 
+<<<<<<< HEAD
 class Replacer1819(TableReplacer):
 
     def migrate_Node(self):
@@ -75,6 +95,20 @@ class Replacer1819(TableReplacer):
                     new_node.header_title_receiptpage = appdata_dict['node']['header_title_receiptpage']
                 else:
                     new_node.header_title_receiptpage = every_language("")
+=======
+class Replacer1718(TableReplacer):
+
+    def migrate_Node(self):
+        print "%s Node migration assistant: allow_iframes_inclusion" % self.std_fancy
+
+        old_node = self.store_old.find(self.get_right_model("Node", 17)).one()
+        new_node = self.get_right_model("Node", 18)()
+
+        for _, v in new_node._storm_columns.iteritems():
+
+            if v.name == 'allow_iframes_inclusion':
+                new_node.allow_iframes_inclusion = False
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
                 continue
 
             setattr(new_node, v.name, getattr(old_node, v.name))

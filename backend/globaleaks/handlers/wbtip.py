@@ -23,6 +23,7 @@ def wb_serialize_tip(internaltip, language):
     ret_dict = {
         'id': internaltip.id,
         'context_id': internaltip.context.id,
+<<<<<<< HEAD
         'creation_date': datetime_to_ISO8601(internaltip.creation_date),
         'last_activity': datetime_to_ISO8601(internaltip.creation_date),
         'expiration_date': datetime_to_ISO8601(internaltip.expiration_date),
@@ -30,6 +31,19 @@ def wb_serialize_tip(internaltip, language):
         'enable_private_messages': internaltip.context.enable_private_messages,
         'show_receivers': internaltip.context.show_receivers,
         'wb_e2e_public': internaltip.wb_e2e_public,
+=======
+        'creation_date' : datetime_to_ISO8601(internaltip.creation_date),
+        'last_activity' : datetime_to_ISO8601(internaltip.creation_date),
+        'expiration_date' : datetime_to_ISO8601(internaltip.expiration_date),
+        'download_limit' : internaltip.download_limit,
+        'access_limit' : internaltip.access_limit,
+        'mark' : internaltip.mark,
+        'wb_steps' : internaltip.wb_steps,
+        'enable_private_messages' : internaltip.context.enable_private_messages,
+        'show_receivers': internaltip.context.show_receivers, 
+        'pgp_glkey_pub': internaltip.pgp_glkey_pub,
+        'pgp_glkey_priv': internaltip.pgp_glkey_priv,
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     }
 
     # context_name and context_description are localized fields
@@ -234,6 +248,7 @@ def get_receiver_list_wb(store, wb_tip_id, language):
             receiver_desc = {
                 "name": receiver.name,
                 "id": receiver.id,
+<<<<<<< HEAD
                 "pgp_key_status": receiver.pgp_key_status,
                 "access_counter": 0,
                 "message_counter": 0,
@@ -243,6 +258,27 @@ def get_receiver_list_wb(store, wb_tip_id, language):
 
             localize_and_append_receiver(receiver, receiver_desc)
 
+=======
+                "gpg_key_status": receiver.gpg_key_status,
+                "access_counter" : 0,
+                "unread_messages" : 0,
+                "read_messages" : 0,
+                "your_messages" : 0,
+                "creation_date" : datetime_to_ISO8601(datetime_now()),
+                "pgp_glkey_pub": receiver.pgp_glkey_pub,
+                # XXX ReceiverTip last activity ?
+            }
+
+            mo = Rosetta(receiver.localized_strings)
+            mo.acquire_storm_object(receiver)
+            receiver_desc["description"] = mo.dump_localized_attr("description", language)
+
+            receiver_list.append(receiver_desc)
+        
+        return receiver_list
+    else:
+        receiver_list = []
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
         for rtip in wb_tip.internaltip.receivertips:
             message_counter = store.find(Message,
                                          Message.receivertip_id == rtip.id).count()
@@ -250,11 +286,21 @@ def get_receiver_list_wb(store, wb_tip_id, language):
             receiver_desc = {
                 "name": rtip.receiver.name,
                 "id": rtip.receiver.id,
+<<<<<<< HEAD
                 "pgp_key_status": rtip.receiver.pgp_key_status,
                 "access_counter": rtip.access_counter,
                 "message_counter": message_counter,
                 "creation_date": datetime_to_ISO8601(datetime_now()),
                 "pgp_e2e_public": rtip.receiver.pgp_e2e_public
+=======
+                "access_counter" : rtip.access_counter,
+                "unread_messages" : unread_messages,
+                "read_messages" : read_messages,
+                "your_messages" : your_messages,
+                "creation_date" : datetime_to_ISO8601(datetime_now()),
+                "pgp_glkey_pub": rtip.receiver.pgp_glkey_pub,
+                # XXX ReceiverTip last activity ?
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
             }
 
             localize_and_append_receiver(rtip.receiver, receiver_desc)

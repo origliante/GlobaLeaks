@@ -230,6 +230,7 @@ def anon_serialize_receiver(receiver, language):
     :return: a serializtion of the object
     """
     ret_dict = {
+<<<<<<< HEAD
         'creation_date': datetime_to_ISO8601(receiver.creation_date),
         'update_date': datetime_to_ISO8601(receiver.last_update),
         'name': receiver.name,
@@ -240,6 +241,18 @@ def anon_serialize_receiver(receiver, language):
         'pgp_key_status': receiver.pgp_key_status,
         "pgp_e2e_public": receiver.pgp_e2e_public,
         'contexts': [c.id for c in receiver.contexts]
+=======
+        "creation_date": datetime_to_ISO8601(receiver.creation_date),
+        "update_date": datetime_to_ISO8601(receiver.last_update),
+        "name": receiver.name,
+        "id": receiver.id,
+        "state": receiver.user.state,
+        "configuration": receiver.configuration, 
+        "presentation_order": receiver.presentation_order,
+        "gpg_key_status": receiver.gpg_key_status,
+        "contexts": contexts,
+        "pgp_glkey_pub": receiver.pgp_glkey_pub,
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     }
 
     return get_localized_values(ret_dict, receiver, receiver.localized_strings, language)

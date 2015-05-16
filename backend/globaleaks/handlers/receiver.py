@@ -22,6 +22,7 @@ from globaleaks.utils.utility import log, acquire_bool, datetime_to_ISO8601, dat
 # https://www.youtube.com/watch?v=BMxaLEGCVdg
 def receiver_serialize_receiver(receiver, language):
     ret_dict = {
+<<<<<<< HEAD
         'id': receiver.id,
         'name': receiver.name,
         'update_date': datetime_to_ISO8601(receiver.last_update),
@@ -46,6 +47,35 @@ def receiver_serialize_receiver(receiver, language):
         'language': receiver.user.language,
         'timezone': receiver.user.timezone,
         'contexts': [c.id for c in receiver.contexts]
+=======
+        "id": receiver.id,
+        "name": receiver.name,
+        "update_date": datetime_to_ISO8601(receiver.last_update),
+        "creation_date": datetime_to_ISO8601(receiver.creation_date),
+        "can_delete_submission": receiver.can_delete_submission,
+        "username": receiver.user.username,
+        "gpg_key_info": receiver.gpg_key_info,
+        "gpg_key_fingerprint": receiver.gpg_key_fingerprint,
+        "gpg_key_remove": False,
+        "gpg_key_armor": receiver.gpg_key_armor,
+        "gpg_key_expiration": datetime_to_ISO8601(receiver.gpg_key_expiration),
+        "gpg_key_status": receiver.gpg_key_status,
+        "pgp_key_armor_priv": receiver.pgp_key_armor_priv,
+        "pgp_glkey_pub": receiver.pgp_glkey_pub,
+        "pgp_glkey_priv": receiver.pgp_glkey_priv,
+        "tip_notification" : receiver.tip_notification,
+        "file_notification" : receiver.file_notification,
+        "comment_notification" : receiver.comment_notification,
+        "message_notification" : receiver.message_notification,
+        "ping_notification": receiver.ping_notification,
+        "mail_address": receiver.mail_address,
+        "ping_mail_address": receiver.ping_mail_address,
+        "contexts": [c.id for c in receiver.contexts],
+        "password": u"",
+        "old_password": u"",
+        "language": receiver.user.language,
+        "timezone": receiver.user.timezone
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     }
 
     return get_localized_values(ret_dict, receiver, receiver.localized_strings, language)
@@ -122,12 +152,19 @@ def update_receiver_settings(store, receiver_id, request, language):
 
     receiver.tip_notification = acquire_bool(request['tip_notification'])
 
+<<<<<<< HEAD
     pgp_options_parse(receiver, request)
 
     #TODO: validate armored pgp keys
 
     receiver.pgp_e2e_public = request['pgp_e2e_public']
     receiver.pgp_e2e_private = request['pgp_e2e_private']
+=======
+    gpg_options_parse(receiver, request)
+    #TODO: validate armored pgp keys
+    receiver.pgp_glkey_pub = request['pgp_glkey_pub']
+    receiver.pgp_glkey_priv = request['pgp_glkey_priv']
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
     return receiver_serialize_receiver(receiver, language)
 
@@ -234,8 +271,12 @@ def get_receivertip_list(store, receiver_id, language):
                     if f['preview']:
                         preview_data.append(f)
         except:
+<<<<<<< HEAD
             # TODO E2E: handle the case of encrypted payload
             pass
+=======
+            preview_data = ['wb_steps_is_encrypted']
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
         single_tip_sum.update({'preview': preview_data})
         rtip_summary_list.append(single_tip_sum)

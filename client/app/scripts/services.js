@@ -47,7 +47,49 @@ angular.module('resourceServices.authentication', [])
           $location.search('');
         };
 
+<<<<<<< HEAD
         $rootScope.login = function(username, userpassword, role, cb) {
+=======
+        $rootScope.login = function(username, password, role, cb) {
+
+          if (role == 'receiver' && password != 'globaleaks') {
+            var pwd = gl_password(password);
+            var passphrase = gl_passphrase(password);
+            $rootScope.receiver_key_passphrase = passphrase;
+            password = pwd;
+          }
+
+          return $http.post('/authentication', {'username': username,
+                                                'password': password,
+                                                'role': role})
+            .success(function(response) {
+              self.id = response.session_id;
+              self.user_id = response.user_id;
+              self.username = username;
+              self.role = response.role;
+              self.session = response.session;
+              self.state = response.state;
+              self.password_change_needed = response.password_change_needed;
+
+              self.homepage = '';
+              self.auth_landing_page = '';
+
+              if (self.role == 'admin') {
+                  self.homepage = '/#/admin/landing';
+                  self.auth_landing_page = '/admin/landing';
+              }
+              if (self.role == 'receiver') {
+                self.homepage = '/#/receiver/activities';
+                if (self.password_change_needed) {
+                    self.auth_landing_page = '/receiver/firstlogin';
+                } else {
+                    self.auth_landing_page = '/receiver/activities';
+                }
+              }
+              if (self.role == 'wb') {
+                self.auth_landing_page = '/status';
+              }
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
           self.username = username;
           self.password = userpassword;
@@ -316,11 +358,15 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
       self.current_context_receivers = [];
       self.current_submission = null; 
       self.receivers_selected = {};
+<<<<<<< HEAD
       self.uploading = false;
       self.receivers_selected_keys = [];
       
       Authentication.whistleblower_keycode = glcrypto.generate_keycode();
       Authentication.whistleblower_e2e_key = undefined;
+=======
+      self.receivers_selected_keys = [];
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
       self.whistleblower_e2e_key_promise = glcrypto.generate_key_from_keycode(Authentication.whistleblower_keycode, 'salt!');
       
@@ -329,9 +375,15 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         self.receivers_selected_keys = [];
         self.current_context_receivers = [];
 
+<<<<<<< HEAD
         forEach(self.receivers, function(receiver) {
           // enumerate only the receivers of the current context and with pgp keys
           if (self.current_context.receivers.indexOf(receiver.id) !== -1 && receiver.pgp_e2e_public) {
+=======
+        forEach(self.receivers, function(receiver){
+          // enumerate only the receivers of the current context and with pgp keys
+          if (self.current_context.receivers.indexOf(receiver.id) !== -1 && receiver.pgp_glkey_pub) {
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
             self.current_context_receivers.push(receiver);
 
             if (!self.current_context.show_receivers) {
@@ -394,12 +446,18 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
         self.current_submission = new submissionResource({
           context_id: self.current_context.id,
+<<<<<<< HEAD
           wb_steps: self.current_context.steps,
           receivers: [],
           human_captcha_answer: 0,
           wb_e2e_public: "",
           /* at the moment is just a fingerprint of the pubkey */
           wb_signature: ""
+=======
+          wb_steps: _.clone(self.current_context.steps),
+          files: [], finalize: false, receivers: [],
+          pgp_glkey_pub: "", pgp_glkey_priv: ""
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
         });
 
         setCurrentContextReceivers();
@@ -437,11 +495,19 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
         // Set the currently selected pgp pub keys
         self.receivers_selected_keys = [];
+<<<<<<< HEAD
         forEach(self.receivers_selected, function(selected, id){
           if (selected) {
             forEach(self.receivers, function(receiver){
               if (id == receiver.id) {
                 self.receivers_selected_keys.push(receiver.pgp_e2e_public);
+=======
+        _.each(self.receivers_selected, function(selected, id){
+          if (selected) {
+            _.each(self.receivers, function(receiver){
+              if (id == receiver.id) {
+                self.receivers_selected_keys.push(receiver.pgp_glkey_pub);
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
               }
             });
           }
@@ -457,6 +523,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
           }
         });
 
+<<<<<<< HEAD
         openpgp.config.show_comment = false;
         openpgp.config.show_version = false;
 
@@ -491,6 +558,48 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
             });
           }
         );
+=======
+        //TODO: generate receipt and passphrase
+        openpgp.config.show_comment = false;
+        openpgp.config.show_version = false;
+        openpgp.generateKeyPair({
+            numBits: 2048,
+            //passphrase: "",
+            userId: "somebody@somewhere.com" }).then( function(tkp) {
+
+            self.current_submission.finalize = true;
+            self.current_submission.pgp_glkey_pub = tkp.publicKeyArmored;
+            self.current_submission.pgp_glkey_priv = tkp.privateKeyArmored;
+
+            console.log('receivers_selected_keys ', self.receivers_selected_keys);
+            var receivers_and_wb_keys = [];
+            _.each(self.receivers_selected_keys, function(key) {
+                var r_key_pub = openpgp.key.readArmored(key).keys[0];
+                receivers_and_wb_keys.push( r_key_pub );
+            });
+            var wb_key_pub = openpgp.key.readArmored( tkp.publicKeyArmored ).keys[0];
+            receivers_and_wb_keys.push( wb_key_pub );
+            console.log('Submission receivers_and_wb_keys ', receivers_and_wb_keys);
+
+            var wb_steps = JSON.stringify(self.current_submission.wb_steps);
+            //console.log(wb_steps);
+
+            openpgp.encryptMessage(receivers_and_wb_keys, wb_steps).then( function(pgp_wb_steps) {
+                var list_wb_steps = [];
+                list_wb_steps.push(pgp_wb_steps);
+                self.current_submission.wb_steps = list_wb_steps;
+
+                self.current_submission.$submit(function(result) {
+                    if (result) {
+                        Authentication.keycode = self.current_submission.receipt;
+                        $location.url("/receipt");
+                    }
+                });
+
+            });
+
+      });
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
       };
 
@@ -498,7 +607,11 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
 }]).
   factory('Tip', ['$resource', '$rootScope', 'Receivers', 'ReceiverPreferences',
+<<<<<<< HEAD
   function($resource, $rootScope, Receivers, ReceiverPreferences) {
+=======
+          function($resource, $rootScope, Receivers, ReceiverPreferences) {
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
     var tipResource = $resource('/rtip/:tip_id', {tip_id: '@id'}, {update: {method: 'PUT'}});
     var receiversResource = $resource('/rtip/:tip_id/receivers', {tip_id: '@tip_id'}, {});
@@ -507,18 +620,57 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
     return function(tipID, fn) {
       var self = this,
+<<<<<<< HEAD
         forEach = angular.forEach;
+=======
+      forEach = angular.forEach;
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
       self.tip = {};
+      
+      ReceiverPreferences.get(function(preferences){
 
+<<<<<<< HEAD
       ReceiverPreferences.get(function(preferences){
         // decrypt receiver priv key
         self.privateKey = openpgp.key.readArmored(preferences.pgp_e2e_private).keys[0];
         var ret = self.privateKey.decrypt($rootScope.receiver_key_passphrase);
+=======
+      tipResource.get(tipID, function(result){
+
+        var privateKey = openpgp.key.readArmored( preferences.pgp_glkey_priv ).keys[0];
+        // decrypt receiver priv key
+        var ret = privateKey.decrypt( $rootScope.receiver_key_passphrase );
+        console.log('decrypted receiver privateKey ', ret);
+
+        openpgp.config.show_comment = false;
+        openpgp.config.show_version = false;
+
+        var pgpMessage = openpgp.message.readArmored( result.wb_steps[0] );
+        openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_wb_steps) {
+
+        receiversResource.query(tipID, function(receiversCollection){
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
         tipResource.get(tipID, function(result){
           self.tip = result;
+<<<<<<< HEAD
+=======
+          var json_wb_steps = JSON.parse(decr_wb_steps);
+          self.tip.wb_steps = json_wb_steps;
+
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
           self.tip.comments = [];
           self.tip.messages = [];
+          self.tip.receivers = receiversCollection;
+          self.receivers_and_wb_keys = [];
+
+          // build receivers and wb pub keys list
+          _.each(receiversCollection, function(receiver) {
+                var r_key_pub = openpgp.key.readArmored(receiver.pgp_glkey_pub).keys[0];
+                self.receivers_and_wb_keys.push( r_key_pub );
+          });
+          var wb_key_pub = openpgp.key.readArmored( self.tip.pgp_glkey_pub ).keys[0];
+          self.receivers_and_wb_keys.push( wb_key_pub );
 
           if (typeof(result.wb_steps[0]) == 'string'
               && result.wb_steps[0].indexOf("-----BEGIN PGP MESSAGE-----") == 0) {
@@ -531,6 +683,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
                 self.tip.wb_steps = result.wb_steps;
           }
 
+<<<<<<< HEAD
           receiversResource.query(tipID, function(receiversCollection){
             self.tip.receivers = receiversCollection;
             self.cleartext_message = '';
@@ -541,6 +694,17 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
             forEach(receiversCollection, function(receiver) {
                 var r_key_pub = openpgp.key.readArmored(receiver.pgp_e2e_public).keys[0];
                 self.receivers_and_wb_keys.push(r_key_pub);
+=======
+          self.tip.newMessage = function(content) {
+            openpgp.encryptMessage(self.receivers_and_wb_keys, content).then( function(pgp_content) {
+
+              var m = new messageResource(tipID);
+              m.content = pgp_content;
+              m.$save(function(newMessage) {
+                self.tip.messages.unshift(newMessage);
+              });
+
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
             });
             var wb_key_pub = openpgp.key.readArmored(self.tip.wb_e2e_public).keys[0];
             self.receivers_and_wb_keys.push(wb_key_pub);
@@ -558,6 +722,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
               });
             };
 
+<<<<<<< HEAD
             self.tip.newMessage = function(content) {
               openpgp.encryptMessage(self.receivers_and_wb_keys, content).then(function(pgp_content) {
                 var m = new messageResource(tipID);
@@ -585,6 +750,23 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
               self.tip.messages = messageCollection;
               fn(self.tip);
             });
+=======
+          messageResource.query(tipID, function(messageCollection){
+            _.each(messageCollection, function(message) {
+
+              if ( message.content.indexOf("-----BEGIN PGP MESSAGE-----") > -1 ) {
+                var pgpMessage = openpgp.message.readArmored( message.content );
+                openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_content) {
+                  message.content = decr_content;
+                }, function(error) {
+                  console.log('decryptMessage error: ', error);
+                });
+              }
+
+            });
+
+            self.tip.messages = messageCollection;
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
             commentsResource.query(tipID, function(commentsCollection){
               forEach(commentsCollection, function(comment) {
@@ -602,11 +784,26 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
               fn(self.tip);
             });
 
+<<<<<<< HEAD
           }); // receiverResource
+=======
+          commentsResource.query(tipID, function(commentsCollection){
+            self.tip.comments = commentsCollection;
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
         }); // tipResource
 
+<<<<<<< HEAD
       }); // ReceiverPreferences
+=======
+        });
+
+        }); // openpgp decrypt
+
+      }); // ReceiverPreferences
+
+      });
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
     };
 
@@ -624,13 +821,19 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
     return function(fn) {
       var self = this;
+<<<<<<< HEAD
       self.keycode = Authentication.whistleblower_keycode;
       self.keyPair = Authentication.whistleblower_e2e_key;
+=======
+      self.tip = {};
+      var privateKey = null;
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
       tipResource.get(function(result) {
         var pgpMessage = openpgp.message.readArmored(result.wb_steps[0]);
         self.privateKey = openpgp.key.readArmored(self.keyPair.privateKeyArmored).keys[0];
 
+<<<<<<< HEAD
         openpgp.config.show_comment = false;
         openpgp.config.show_version = false;
 
@@ -657,8 +860,58 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
             forEach(receiversCollection, function(receiver) {
                 var r_key_pub = openpgp.key.readArmored(receiver.pgp_e2e_public).keys[0];
                 self.receivers_and_wb_keys.push(r_key_pub);
+=======
+        privateKey = openpgp.key.readArmored( result.pgp_glkey_priv ).keys[0];
+        //TODO: decrypt key with receipt, now it is in unencrypted
+        var pgpMessage = openpgp.message.readArmored( result.wb_steps[0] );
+
+        openpgp.config.show_comment = false;
+        openpgp.config.show_version = false;
+        openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_wb_steps) {
+
+        receiversResource.query(function(receiversCollection) {
+
+          self.tip = result;
+          var json_wb_steps = JSON.parse(decr_wb_steps);
+          self.tip.wb_steps = json_wb_steps;
+
+          self.tip.comments = [];
+          self.tip.messages = [];
+          self.tip.receivers = [];
+          self.tip.msg_receivers_selector = [];
+          self.tip.msg_receiver_selected = null;
+          self.tip.receivers = receiversCollection;
+          self.receivers_and_wb_keys = [];
+
+          // build receivers and wb pub keys list
+          _.each(receiversCollection, function(receiver) {
+                var r_key_pub = openpgp.key.readArmored(receiver.pgp_glkey_pub).keys[0];
+                self.receivers_and_wb_keys.push( r_key_pub );
+          });
+          var wb_key_pub = openpgp.key.readArmored( self.tip.pgp_glkey_pub ).keys[0];
+          self.receivers_and_wb_keys.push( wb_key_pub );
+
+          self.tip.newComment = function(content) {
+            var c = new commentsResource();
+            c.content = content;
+            c.$save(function(newComment) {
+              self.tip.comments.unshift(newComment);
+            });
+          };
+
+          self.tip.newMessage = function(content) {
+            openpgp.encryptMessage(self.receivers_and_wb_keys, content).then( function(pgp_content) {
+
+              var m = new messageResource({id: self.tip.msg_receiver_selected});
+              m.content = pgp_content;
+              m.$save(function(newMessage) {
+                self.tip.messages.unshift(newMessage);
+              });
+
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
             });
 
+<<<<<<< HEAD
             self.tip.newComment = function(content) {
               openpgp.encryptMessage(self.receivers_and_wb_keys, content).then(function(pgp_content) {
                 var c = new commentsResource();
@@ -683,6 +936,30 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
                 });
               });
             };
+=======
+          self.tip.updateMessages = function () {
+            if (self.tip.msg_receiver_selected) {
+              messageResource.query({id: self.tip.msg_receiver_selected}, function (messageCollection) {
+                _.each(messageCollection, function(message) {
+
+                  if ( message.content.indexOf("-----BEGIN PGP MESSAGE-----") > -1 ) {
+                    var pgpMessage = openpgp.message.readArmored( message.content );
+                    openpgp.decryptMessage(privateKey, pgpMessage).then(function(decr_content) {
+                      message.content = decr_content;
+                    });
+                  }
+
+                });
+
+                self.tip.messages = messageCollection;
+              });
+            };
+          };
+
+          commentsResource.query({}, function(commentsCollection){
+            self.tip.comments = commentsCollection;
+          })
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
             self.tip.updateMessages = function () {
               if (self.tip.msg_receiver_selected) {
@@ -718,11 +995,15 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
 
           }); //receiversResource
 
+<<<<<<< HEAD
         }); //decryptMessage
 
       }); //tipResource
 
     };
+=======
+          fn(self.tip);
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
 }]).
   factory('WBReceipt', ['$rootScope', 'Authentication', 'glcrypto',
@@ -771,6 +1052,9 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
           $rootScope.successes.push({message: 'Updated your password!'});
           $location.path("/receiver/tips");
         });
+
+        }); //openpgp decrypt
+
       });
     }
 
@@ -946,6 +1230,7 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         receiver.can_postpone_expiration = false;
         receiver.tip_notification = true;
         receiver.ping_notification = false;
+<<<<<<< HEAD
         receiver.pgp_key_info = '';
         receiver.pgp_key_fingerprint = '';
         receiver.pgp_key_remove = false;
@@ -956,6 +1241,18 @@ angular.module('resourceServices', ['ngResource', 'resourceServices.authenticati
         receiver.pgp_key_public = '';
         receiver.pgp_e2e_public = '';
         receiver.pgp_e2e_private = '';
+=======
+        receiver.gpg_key_info = '';
+        receiver.gpg_key_fingerprint = '';
+        receiver.gpg_key_remove = false;
+        receiver.gpg_key_armor = '';
+        receiver.gpg_key_expiration = '';
+        receiver.gpg_key_status = 'ignored';
+        receiver.gpg_enable_notification = false;
+        receiver.pgp_key_armor_priv = '';
+        receiver.pgp_glkey_pub = '';
+        receiver.pgp_glkey_priv = '';
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
         receiver.presentation_order = 0;
         receiver.state = 'enable';
         receiver.configuration = 'default';

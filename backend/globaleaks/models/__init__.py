@@ -240,6 +240,9 @@ class InternalTip(Model):
     wb_e2e_public = Unicode()
     is_e2e_encrypted = Bool()
 
+    pgp_glkey_pub = Unicode()
+    pgp_glkey_priv = Unicode()
+
 
 class ReceiverTip(Model):
     """
@@ -583,6 +586,7 @@ class Receiver(Model):
     configuration = Unicode()
     # configurations: 'default', 'forcefully_selected', 'unselectable'
 
+<<<<<<< HEAD
     # of PGP key fields
     pgp_key_info = Unicode()
     pgp_key_fingerprint = Unicode()
@@ -594,6 +598,19 @@ class Receiver(Model):
 
     pgp_e2e_public  = Unicode()
     pgp_e2e_private = Unicode()
+=======
+    # of GPG key fields
+    gpg_key_info = Unicode()
+    gpg_key_fingerprint = Unicode()
+    gpg_key_armor = Unicode()
+    gpg_key_expiration = DateTime()
+    gpg_key_status = Unicode()
+    # gpg_statuses = [u'disabled', u'enabled']
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
+
+    pgp_key_armor_priv = Unicode()
+    pgp_glkey_pub = Unicode()
+    pgp_glkey_priv = Unicode()
 
     # Can be changed only by admin (but also differ from username!)
     mail_address = Unicode()

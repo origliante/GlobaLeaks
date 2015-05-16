@@ -40,18 +40,30 @@ AuthDesc = {
     'role': unicode
 }
 
+<<<<<<< HEAD
 SubmissionDesc = {
     'wb_steps': list,
     'human_captcha_answer': int,
     'receivers': [uuid_regexp],
     'wb_e2e_public': unicode,
     'wb_signature': unicode,
+=======
+wbSubmissionDesc = {
+    'wb_steps' : list,
+    'context_id' : uuid_regexp,
+    'receivers' : [ uuid_regexp ],
+    'files' : [ uuid_regexp ],
+    'finalize' : bool,
+    'pgp_glkey_pub': unicode,
+    'pgp_glkey_priv': unicode
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 }
 
 ReceiverReceiverDesc = {
     'name': unicode,
     'password': unicode,
     'old_password': unicode,
+<<<<<<< HEAD
     'mail_address': email_regexp,
     'ping_mail_address': email_regexp,
     'description': unicode,
@@ -63,6 +75,25 @@ ReceiverReceiverDesc = {
     'pgp_key_status': unicode,
     'pgp_e2e_public': unicode,
     'pgp_e2e_private': unicode,
+=======
+    # 'username' : unicode, XXX at creation time is the same of mail_address
+    'mail_address' : email_regexp,
+    # mail_address contain the 'admin' inserted mail
+    "ping_mail_address": email_regexp,
+    # ping_mail_address is a copy of 'mail_address' if unset.
+    'description' : unicode,
+    'gpg_key_remove': bool,
+    'gpg_key_fingerprint': unicode,
+    'gpg_key_expiration': unicode,
+    'gpg_key_info': unicode,
+    'gpg_key_armor': unicode,
+    'gpg_key_status': unicode,
+    'pgp_key_armor_priv': unicode,
+    'pgp_glkey_pub': unicode,
+    'pgp_glkey_priv': unicode,
+    "comment_notification": bool,
+    "file_notification": bool,
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     "tip_notification": bool,
     "ping_notification": bool,
     "language": unicode,
@@ -204,6 +235,7 @@ AdminReceiverDesc = {
     'can_delete_submission': bool,
     'can_postpone_expiration': bool,
     'tip_notification': bool,
+<<<<<<< HEAD
     'ping_notification': bool,
     'pgp_key_remove': bool,
     'pgp_key_fingerprint': unicode,
@@ -214,6 +246,20 @@ AdminReceiverDesc = {
     'pgp_key_public': unicode,
     'pgp_e2e_public': unicode,
     'pgp_e2e_private': unicode,
+=======
+    'file_notification': bool,
+    'comment_notification': bool,
+    'message_notification': bool,
+    'gpg_key_remove': bool,
+    'gpg_key_fingerprint': unicode,
+    'gpg_key_expiration': unicode,
+    'gpg_key_info': unicode,
+    'gpg_key_armor': unicode,
+    'gpg_key_status': unicode,
+    'pgp_key_armor_priv': unicode,
+    'pgp_glkey_pub': unicode,
+    'pgp_glkey_priv': unicode,
+>>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
     'presentation_order': int,
     "language": unicode,
     "timezone": int
