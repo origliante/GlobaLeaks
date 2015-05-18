@@ -1,28 +1,59 @@
-<!--[if lt IE 7]>      <html lang="en" ng-app="myApp" class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
-<!--[if IE 7]>         <html lang="en" ng-app="myApp" class="no-js lt-ie9 lt-ie8"> <![endif]-->
-<!--[if IE 8]>         <html lang="en" ng-app="myApp" class="no-js lt-ie9"> <![endif]-->
-<!--[if gt IE 8]><!--> <html class="no-js" lang="en" ng-app="appname"> <!--<![endif]-->
+<html>
 <head>
 
 <script>
 
 function get_browser_info(){
-    var ua=navigator.userAgent,tem,M=ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || []; 
-    if(/trident/i.test(M[1])){
-        tem=/\brv[ :]+(\d+)/g.exec(ua) || []; 
-        return {name:'IE ',version:(tem[1]||'')};
-        }   
-    if(M[1]==='Chrome'){
-        tem=ua.match(/\bOPR\/(\d+)/)
-        if(tem!=null)   {return {name:'Opera', version:tem[1]};}
-        }   
-    M=M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
-    if((tem=ua.match(/version\/(\d+)/i))!=null) {M.splice(1,1,tem[1]);}
-    return {
-      name: M[0],
-      version: M[1]
-    };
- }
+  if (is_torbrowser()){
+    var version = 0;
+    if (navigator.userAgent == "Mozilla/5.0 (Windows NT 6.1; rv:31.0) Gecko/20100101 Firefox/31.0") {
+      version = 450;
+    }
+    return {name:'TorBrowser', version:version};
+  }
+
+  var ua=navigator.userAgent,tem,M=ua.match(/(opera|chrome|safari|firefox|msie|trident(?=\/))\/?\s*(\d+)/i) || []; 
+  if (/trident/i.test(M[1])){
+    tem=/\brv[ :]+(\d+)/g.exec(ua) || []; 
+    return {name:'IE', version:(tem[1]||'')};
+  }   
+  if (M[1]==='Chrome'){
+    tem=ua.match(/\bOPR\/(\d+)/)
+    if(tem!=null)   {return {name:'Opera', version:tem[1]};}
+  }   
+  M = M[2]? [M[1], M[2]]: [navigator.appName, navigator.appVersion, '-?'];
+  if ((tem=ua.match(/version\/(\d+)/i))!=null) {M.splice(1,1,tem[1]);}
+  return {
+    name: M[0],
+    version: M[1]
+  };
+}
+
+
+//https://git.torproject.org/flashproxy.git/proxy/flashproxy.js
+var TBB_UAS = [
+    "Mozilla/5.0 (Windows NT 6.1; rv:10.0) Gecko/20100101 Firefox/10.0",
+    "Mozilla/5.0 (Windows NT 6.1; rv:17.0) Gecko/20100101 Firefox/17.0",
+    "Mozilla/5.0 (Windows NT 6.1; rv:24.0) Gecko/20100101 Firefox/24.0",
+    "Mozilla/5.0 (Windows NT 6.1; rv:31.0) Gecko/20100101 Firefox/31.0"
+];
+
+//https://trac.torproject.org/projects/tor/ticket/6293
+function is_torbrowser(){
+  var isTB = false;
+
+  if ( (TBB_UAS.indexOf(navigator.userAgent) > -1)
+     //https://lists.torproject.org/pipermail/tor-commits/2013-March/053646.html
+     //&& (sessionStorage === null)
+     && (navigator.mimeTypes && navigator.mimeTypes.length === 0)
+     &&  (navigator.platform.indexOf("Win32") != -1)
+     && ((navigator.plugins.length == 0) || (navigator.plugins.length == 1 && navigator.plugins[0].name == "Shockwave Flash") ) )
+  {
+    isTB = true;
+  }
+  return isTB;
+}
+
 
 function is_browser_supported(){
   var minreq = new Array();
@@ -30,6 +61,7 @@ function is_browser_supported(){
   minreq['IE'] = 11;
   minreq['Firefox'] = 36;
   minreq['Safari'] = 8;
+  minreq['TorBrowser'] = 0;
 
   var binfo = get_browser_info();
   if (binfo.version >= minreq[binfo.name]) {
@@ -38,17 +70,44 @@ function is_browser_supported(){
   return false;
 }
 
-var binfo = get_browser_info();
-var bstr = "Name: " + binfo.name + " Version: " + binfo.version;
-console.log(bstr);
-alert(bstr);
-alert("is browser supported? " + is_browser_supported());
+function show(id) {
+    document.getElementById(id).style.display = 'block';
+}
+function hide(id) {
+    document.getElementById(id).style.display = 'none';
+}
+
+function init() {
+  hide('javascript_disabled');
+
+  var binfo = get_browser_info();
+  document.getElementById('browser_name').innerHTML = binfo.name;
+  document.getElementById('browser_version').innerHTML = binfo.version;
+
+  if (!is_browser_supported()) {
+    show('browser_not_supported');
+  } else {
+    //go to GL
+  }
+}
 
 </script>
 
 </head>
-<body>
+<body onload="init()">
 
+<p id="javascript_disabled">You have javascript disabled and GlobaLeaks needs javascript to run. Please turn it on and try again ;-)</p>
+
+<div id="current_browser">
+<p>Your browser is:</p>
+<span id="browser_name"></span>
+<p>Version:</p>
+<span id="browser_version"></span>
+</div>
+
+<div id="browser_not_supported" style="display: none">
+<p>Your browser is not supported by GlobaLeaks. It's time to get a better browser!</p>
+</div>
 
 </body>
 </html>
