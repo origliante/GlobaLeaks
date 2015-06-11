@@ -7,99 +7,100 @@ function($scope, $rootScope, $http, $route, $location, Admin, Node, GLCache, CON
   $scope.http_or_https_regexp = CONSTANTS.http_or_https_regexp;
   $scope.timezones = CONSTANTS.timezones;
 
-  // XXX this should actually be defined per controller
-  // otherwise every time you open a new page the button appears enabled
-  // because such item is !=
-  $scope.master = {};
-
   // XXX convert this to a directive
   // This is used for setting the current menu in the sidebar
   var current_menu = $location.path().split('/').slice(-1);
   $scope.active = {};
   $scope.active[current_menu] = "active";
 
-  $scope.admin = new Admin();
+  $scope.admin = new Admin(function() {
 
-  $scope.languages_enabled_edit = {};
-  $scope.languages_enabled_selector = {};
+    $scope.languages_enabled_edit = {};
+    $scope.languages_enabled_selector = {};
 
-  Node.get(function(node) {
-    $scope.languages_supported = {};
-    $scope.languages_enabled = [];
-    $scope.languages_enabled_selector = [];
-    angular.forEach(node.languages_supported, function(lang) {
-      var code = lang['code'];
-      var name = lang['name'];
-      $scope.languages_supported[code] = name;
-      if (node.languages_enabled.indexOf(code) != -1) {
-        $scope.languages_enabled[code] = name;
-        $scope.languages_enabled_selector.push({"name": name,"code": code});
-      }
-    });
+    Node.get(function(node) {
+      $scope.languages_supported = {};
+      $scope.languages_enabled = [];
+      $scope.languages_enabled_selector = [];
+      angular.forEach(node.languages_supported, function(lang) {
+        var code = lang.code;
+        var name = lang.name;
+        $scope.languages_supported[code] = name;
+        if (node.languages_enabled.indexOf(code) !== -1) {
+          $scope.languages_enabled[code] = name;
+          $scope.languages_enabled_selector.push({"name": name,"code": code});
+        }
+      });
 
-    $scope.$watch('languages_enabled', function(){
-      if ($scope.languages_enabled) {
-        $scope.languages_enabled_edit = {};
-        angular.forEach($scope.languages_supported, function(lang, code){
-          $scope.languages_enabled_edit[code] = code in $scope.languages_enabled;
-        });
-      }
-
-    }, true);
-
-    $scope.$watch('languages_enabled_edit', function() {
-      if ($scope.languages_enabled) {
-        var languages_enabled_selector = [];
-        var change_default = false;
-        var language_selected = $scope.admin.node.default_language;
-        if (! $scope.languages_enabled_edit[$scope.admin.node.default_language]) {
-          change_default = true;
+      $scope.$watch('languages_enabled', function(){
+        if ($scope.languages_enabled) {
+          $scope.languages_enabled_edit = {};
+          angular.forEach($scope.languages_supported, function(lang, code){
+            $scope.languages_enabled_edit[code] = code in $scope.languages_enabled;
+          });
         }
 
-        angular.forEach($scope.languages_supported, function(lang, code) {
-          if ($scope.languages_enabled_edit[code]) {
-            languages_enabled_selector.push({'name': lang, 'code': code});
+      }, true);
 
-            if (change_default === true) {
-              language_selected = lang;
-              change_default = false;
+      $scope.$watch('languages_enabled_edit', function() {
+        if ($scope.languages_enabled) {
+          var languages_enabled_selector = [];
+          var change_default = false;
+          var language_selected = $scope.admin.node.default_language;
+          if (! $scope.languages_enabled_edit[$scope.admin.node.default_language]) {
+            change_default = true;
+          }
+
+          angular.forEach($scope.languages_supported, function(lang, code) {
+            if ($scope.languages_enabled_edit[code]) {
+              languages_enabled_selector.push({'name': lang, 'code': code});
+
+              if (change_default === true) {
+                language_selected = lang;
+                change_default = false;
+              }
             }
-          }
-        });
+          });
 
-        var languages_enabled = [];
-        angular.forEach($scope.languages_enabled_edit, function(enabled, code) {
-          if (enabled) {
-            languages_enabled.push(code);
-          }
-        });
+          var languages_enabled = [];
+          angular.forEach($scope.languages_enabled_edit, function(enabled, code) {
+            if (enabled) {
+              languages_enabled.push(code);
+            }
+          });
 
-        $scope.admin.node.default_language = language_selected;
-        $scope.admin.node.languages_enabled = languages_enabled;
+          $scope.admin.node.default_language = language_selected;
+          $scope.admin.node.languages_enabled = languages_enabled;
 
-        $scope.languages_enabled_selector = languages_enabled_selector;
+          $scope.languages_enabled_selector = languages_enabled_selector;
 
+        }
+      }, true);
+    });
+
+    // We need to have a special function for updating the node since we need to add old_password and password attribute
+    // if they are not present
+    $scope.updateNode = function(node) {
+
+      if (node.password === undefined) {
+        node.password = "";
       }
-    }, true);
-  });
 
-  // We need to have a special function for updating the node since we need to add old_password and password attribute
-  // if they are not present
-  $scope.updateNode = function(node) {
+      if (node.check_password === undefined) {
+        node.password = "";
+      }
 
-    if (node.password === undefined)
-      node.password = "";
-    if (node.check_password === undefined)
-      node.password = "";
-    if (node.old_password === undefined)
-      node.old_password = "";
+      if (node.old_password === undefined) {
+        node.old_password = "";
+      }
 
-    var cb = function() {
-      $rootScope.$broadcast("REFRESH");
+      var cb = function() {
+        $rootScope.$broadcast("REFRESH");
+      };
+
+      $scope.update(node, cb);
     };
-
-    $scope.update(node, cb);
-  };
+  });
 
 }]);
 
@@ -158,7 +159,7 @@ GLClient.controller('AdminContentCtrl', ['$scope', '$http', 'StaticFiles', 'Defa
 
   $scope.fileExists = function (filename) {
     for (var i=0; i<$scope.staticfiles.length; i++) {
-      if ($scope.staticfiles[i].filename == filename) {
+      if ($scope.staticfiles[i].filename === filename) {
         return true;
       }
     }
@@ -187,12 +188,12 @@ GLClient.controller('AdminMailCtrl', ['$scope', function($scope){
       ctrl: TabCtrl
     },
     {
-      title:"Plaintext Notification Templates",
+      title:"Receiver Notification Templates",
       template:"views/admin/mail/tab2.html",
       ctrl: TabCtrl
     },
     {
-      title:"Encrypted Notification Templates",
+      title:"Admin Notification Templates",
       template:"views/admin/mail/tab3.html",
       ctrl: TabCtrl
     }
@@ -214,8 +215,10 @@ GLClient.controller('AdminAdvancedCtrl', ['$scope', '$http', '$modal',
     }
   ];
   $scope.open_modal_allow_unencrypted = function() {
-    if ($scope.admin.node.allow_unencrypted)
+    if ($scope.admin.node.allow_unencrypted) {
       return;
+    }
+
     var modalInstance = $modal.open({
       templateUrl: 'views/partials/disable_encryption.html',
       controller: 'DisableEncryptionCtrl'
@@ -227,15 +230,3 @@ GLClient.controller('AdminAdvancedCtrl', ['$scope', '$http', '$modal',
   };
 
 }]);
-
-ConfirmableDialogCtrl = ['$scope', '$modalInstance', 'object', function($scope, $modalInstance, object) {
-  $scope.object = object;
-
-  $scope.ok = function () {
-    $modalInstance.close($scope.object);
-  };
-
-  $scope.cancel = function () {
-    $modalInstance.dismiss('cancel');
-  };
-}];

@@ -11,6 +11,7 @@ GLClient.controller('AdminStepAddCtrl', ['$scope', '$rootScope',
           label: $scope.new_step_label,
           description: '',
           hint: '',
+          presentation_order: $scope.context.steps.length,
           children: []
         }
       );
@@ -26,18 +27,18 @@ GLClient.controller('AdminStepAddCtrl', ['$scope', '$rootScope',
   }
 ]);
 
-GLClient.controller('AdminFieldsTemplateAdderCtrl', ['$scope',
-  function($scope) {
-    $scope.field = $scope.template_fields[$scope.field_key];
-  }
-]);
-
 GLClient.controller('AdminStepEditorCtrl', ['$scope', '$modal',
   function($scope, $modal) {
 
+    $scope.editing = false;
+
+    $scope.toggleEditing = function () {
+      $scope.editing = $scope.editing ^ 1;
+    };
+
     $scope.deleteFromList = function(list, elem) {
       var idx = list.indexOf(elem);
-      if (idx != -1) {
+      if (idx !== -1) {
         list.splice(idx, 1);
       }
     };
@@ -155,7 +156,7 @@ GLClient.controller('AdminStepEditorCtrl', ['$scope', '$modal',
     $scope.template_fields = $scope.admin.template_fields;
     angular.forEach($scope.step.children, function(field, index) {
       $scope.composable_fields.push(field);
-      if (field.type == 'fieldgroup') {
+      if (field.type === 'fieldgroup') {
         angular.forEach(field.children, function(field_c, index_c) {
           $scope.composable_fields.push(field_c);
        });
@@ -170,7 +171,7 @@ GLClient.controller('AdminStepEditorCtrl', ['$scope', '$modal',
     $scope.moveFieldDown = function(field) {
       field.y += 1;
       $scope.save_field(field);
-    }
+    };
 
     $scope.sortableOptions = {
       orderChanged: function(e) {
@@ -186,5 +187,11 @@ GLClient.controller('AdminStepEditorCtrl', ['$scope', '$modal',
       }
     };
 
+  }
+]);
+
+GLClient.controller('AdminFieldsTemplateAdderCtrl', ['$scope',
+  function($scope) {
+    $scope.field = $scope.template_fields[$scope.field_key];
   }
 ]);

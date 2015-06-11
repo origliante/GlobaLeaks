@@ -1,30 +1,57 @@
 GLClient.controller('SubmissionCtrl',
-    ['$scope', '$rootScope', '$location', '$modal', 'Authentication', 'Submission', 'Receivers', 'WBReceipt',
-      function ($scope, $rootScope, $location, $modal, Authentication, Submission, Receivers, WBReceipt) {
+    ['$scope', '$rootScope', '$filter', '$location', '$timeout', '$modal', 'Authentication', 'Submission',
+      function ($scope, $rootScope, $filter, $location, $timeout, $modal, Authentication, Submission) {
 
   $rootScope.invalidForm = true;
 
-  var context_id = $location.search().context;
-  var receivers_ids = $location.search().receivers;
-  var contexts_selectable = $location.search().contexts_selectable;
-  var receivers_selectable = $location.search().receivers_selectable;
+  $scope.context_id = $location.search().context;
+  $scope.receivers_ids = $location.search().receivers;
+  $scope.contexts_selectable = $location.search().contexts_selectable;
+  $scope.receivers_selectable = $location.search().receivers_selectable;
 
-  if (receivers_ids) {
+  $scope.problemToBeSolved = false;
+
+  $scope.captchaProblemSolved = function() {
+    $scope.submission._submission.human_captcha = false;
+    $scope.problemToBeSolved = false;
+  }
+
+  $scope.openProblemDialog = function(submission){
+    var modalInstance = $modal.open({
+        templateUrl:  'views/partials/captchas.html',
+        controller: 'ConfirmableDialogCtrl',
+        backdrop: 'static',
+        keyboard: false,
+        resolve: {
+          object: function () {
+            return submission;
+          }
+        }
+
+    });
+
+    modalInstance.result.then(
+       function(result) { $scope.captchaProblemSolved($scope.submission); },
+       function(result) { }
+    );
+  };
+
+  if ($scope.receivers_ids) {
     try {
-      receivers_ids = JSON.parse(receivers_ids);
+      $scope.receivers_ids = JSON.parse($scope.receivers_ids);
     }
     catch(err) {
-      receivers_ids = undefined;
+      $scope.receivers_ids = undefined;
     }
   }
 
-  if (contexts_selectable == "false" && context_id) {
+  if ($scope.contexts_selectable === "false" && $scope.context_id) {
     $scope.contexts_selectable = false;
   } else {
     $scope.contexts_selectable = true;
   }
 
-  if (receivers_selectable == "false" && receivers_ids) {
+  if ($scope.receivers_selectable === "false" && $scope.receivers_ids) {
     $scope.receivers_selectable = false;
   } else {
     $scope.receivers_selectable = true;
@@ -36,13 +63,6 @@ GLClient.controller('SubmissionCtrl',
     $scope.contextsOrderPredicate = 'presentation_order';
   }
 
-  new Submission(function (submission) {
-    $scope.submission = submission;
-    $scope.fields = submission.fields;
-    $scope.indexed_fields = submission.indexed_fields;
-    $scope.submit = $scope.submission.submit;
-  }, context_id, receivers_ids);
-
   var checkReceiverSelected = function () {
     $scope.receiver_selected = false;
     // Check if there is at least one selected receiver
@@ -52,30 +72,33 @@ GLClient.controller('SubmissionCtrl',
 
   };
 
-  $scope.selected_receivers_count = function () {
-    var count = 0;
+  var startCountdown = function() {
+    $scope.submission.wait = true;
 
-    if ($scope.submission) {
-      angular.forEach($scope.submission.receivers_selected, function (selected) {
-        if (selected) {
-          count += 1;
-        }
-      });
-    }
+    $scope.submission.countdown = $scope.submission._submission.start_validity_secs;
 
-    return count;
-  };
+    var countDown = function () {
+      $scope.submission.countdown -= 1;
+      if ($scope.submission.countdown <= 0) {
+        $scope.submission.wait = false;
+      } else {
+        $timeout(countDown, 1000);
+      }
+    };
+
+    countDown();
+  }
 
   $scope.selectable = function () {
-    if ($scope.submission.current_context.maximum_selectable_receivers == 0) {
+    if ($scope.submission.context.maximum_selectable_receivers === 0) {
       return true;
     }
 
-    return $scope.selected_receivers_count() < $scope.submission.current_context.maximum_selectable_receivers;
+    return $scope.selected_receivers_count() < $scope.submission.maximum_selectable_receivers;
   };
 
   $scope.switch_selection = function (receiver) {
-    if (receiver.configuration != 'default' || (!$scope.submission.allow_unencrypted && receiver.missing_pgp)) {
+    if (receiver.configuration !== 'default' || (!$scope.node.allow_unencrypted && receiver.missing_pgp)) {
       return;
     }
     if ($scope.submission.receivers_selected[receiver.id] || $scope.selectable()) {
@@ -93,15 +116,17 @@ GLClient.controller('SubmissionCtrl',
   };
 
   $scope.hasNextStep = function(){
-    if ($scope.submission.current_context == undefined)
+    if ($scope.selected_context === undefined) {
       return false;
+    }
 
-    return $scope.selection < $scope.submission.current_context.steps.length;
+    return $scope.selection < $scope.selected_context.steps.length;
   };
 
   $scope.hasPreviousStep = function(){
-    if ($scope.submission.current_context == undefined)
+    if ($scope.selected_context === undefined) {
       return false;
+    }
 
     return $scope.selection > 0;
   };
@@ -123,33 +148,36 @@ GLClient.controller('SubmissionCtrl',
       return;
     }
 
-    return '/submission/' + $scope.submission.current_submission.id + '/file';
+    return 'submission/' + $scope.submission._submission.id + '/file';
   };
 
+  $scope.prepareSubmission = function(context, receivers_ids) {
+    $scope.submission.create(context.id, receivers_ids, function () {
+      startCountdown();
 
-  // Watch for changes in certain variables
-  $scope.$watch('submission.current_context', function () {
-    if ($scope.submission && $scope.submission.current_context) {
-      $scope.submission.create(function () {
+      $scope.problemToBeSolved = $scope.submission._submission.human_captcha !== false;
 
-        if ($scope.submission.current_context.show_receivers_in_alphabetical_order) {
-          $scope.receiversOrderPredicate = 'name';
-        } else {
-          $scope.receiversOrderPredicate = 'presentation_order';
-        }
+      if ($scope.problemToBeSolved) {
+        $scope.openProblemDialog($scope.submission);
+      }
 
-        if ((!receivers_selectable && !$scope.submission.current_context.show_receivers)) {
-          $scope.skip_first_step = true;
-          $scope.selection = 1;
-        } else {
-          $scope.skip_first_step = false;
-          $scope.selection = 0;
-        }
+      if ($scope.submission.context.show_receivers_in_alphabetical_order) {
+        $scope.receiversOrderPredicate = 'name';
+      } else {
+        $scope.receiversOrderPredicate = 'presentation_order';
+      }
 
-      });
+      if ((!$scope.receivers_selectable || !$scope.submission.context.show_receivers)) {
+        $scope.skip_first_step = true;
+        $scope.selection = 1;
+      } else {
+        $scope.skip_first_step = false;
+        $scope.selection = 0;
+      }
+
       checkReceiverSelected();
-     }
-  });
+    });
+  }
 
   $scope.$watch('submission.receivers_selected', function () {
     if ($scope.submission) {
@@ -157,12 +185,40 @@ GLClient.controller('SubmissionCtrl',
     }
   }, true);
 
+  new Submission(function(submission) {
+    $scope.submission = submission;
+
+    var context = null;
+
+    if ($scope.context_id) {
+      context = $filter('filter')($rootScope.contexts,
+                                  {"id": $scope.context_id})[0];
+    } else if ($rootScope.contexts.length == 1) {
+      context = $rootScope.contexts[0];
+    }
+
+    if (context) {
+      $scope.selected_context = context;
+      $scope.prepareSubmission(context, $scope.receivers_ids);
+    }
+
+    // Watch for changes in certain variables
+    $scope.$watch('selected_context', function (newVal, oldVal) {
+      if (newVal && newVal !== oldVal) {
+        if ($scope.submission && $scope.selected_context) {
+          $scope.prepareSubmission($scope.selected_context, []);
+        }
+      }
+    });
+
+  });
+
 }]).
 controller('SubmissionStepCtrl', ['$scope', function($scope) {
   $scope.uploads = [];
 }]).
 controller('SubmissionFieldCtrl', ['$scope', function ($scope) {
-  if ($scope.field.type == 'fileupload') {
+  if ($scope.field.type === 'fileupload') {
     $scope.field.value = {};
     $scope.upload_callbacks = [];
 
@@ -193,14 +249,27 @@ controller('SubmissionFieldCtrl', ['$scope', function ($scope) {
     }
   };
 
+  $scope.validateRequiredCheckbox = function(field) {
+    if (!field.required) {
+      return true;
+    }
+
+    var ret = false;
+    angular.forEach(field.value, function (value) {
+      if (value.value && value.value === true) {
+        ret |= true;
+      }
+    });
+
+    return ret;
+  };
+
 }]).
-controller('ReceiptController', ['$scope', '$location', 'Authentication',
-  function($scope, $location, Authentication) {
-
-    format_keycode = function(keycode) {
-      var ret = '';
-
-      if (keycode && keycode.length == 16) {
+controller('ReceiptController', ['$scope', '$location', 'Authentication', 'WhistleblowerTip',
+  function($scope, $location, Authentication, WhistleblowerTip) {
+    var format_keycode = function(keycode) {
+      var ret = keycode;
+      if (keycode && keycode.length === 16) {
         ret =  keycode.substr(0, 4) + ' ' +
                keycode.substr(4, 4) + ' ' +
                keycode.substr(8, 4) + ' ' +
@@ -208,8 +277,9 @@ controller('ReceiptController', ['$scope', '$location', 'Authentication',
       }
 
       return ret;
+
     };
 
-    $scope.keycode = Authentication.whistleblower_keycode;
+    $scope.keycode = format_keycode(Authentication.keycode);
     $scope.formatted_keycode = format_keycode($scope.keycode);
 }]);

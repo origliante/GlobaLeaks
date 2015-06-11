@@ -45,8 +45,6 @@ class TokenList:
 
 
 class Token(TempObj):
-    SUBMISSION_MINIMUM_DURATION = 0
-    SUBMISSION_MAXIMUM_DURATION = 3600 * 4
     MAXIMUM_ATTEMPTS_PER_TOKEN = 3
 
     def __init__(self, token_kind, context_id):
@@ -56,11 +54,6 @@ class Token(TempObj):
         we plan to add other kinds like 'file'.
 
         """
-        # Remind: this is just for developers, because if a clean house
-        # is a sign of a waste life, a Token object without shortcut
-        # is a sign of a psyco life. (vecnish!)
-        if GLSetting.devel_mode:
-            self.start_validity_secs = 0
 
         if reactor_override:
             reactor = reactor_override
@@ -70,8 +63,14 @@ class Token(TempObj):
         self.kind = token_kind
 
         # both 'validity' variables need to be expressed in seconds
-        self.start_validity_secs = Token.SUBMISSION_MINIMUM_DURATION
-        self.end_validity_secs = Token.SUBMISSION_MAXIMUM_DURATION
+        self.start_validity_secs = GLSetting.memory_copy.submission_minimum_delay
+        self.end_validity_secs = GLSetting.memory_copy.submission_maximum_ttl
+
+        # Remind: this is just for developers, because if a clean house
+        # is a sign of a waste life, a Token object without shortcut
+        # is a sign of a psycho life. (vecnish!)
+        if GLSetting.devel_mode:
+            self.start_validity_secs = 0
 
         self.remaining_allowed_attempts = Token.MAXIMUM_ATTEMPTS_PER_TOKEN
 
@@ -131,11 +130,10 @@ class Token(TempObj):
         return {
             'token_id': self.token_id,
             'creation_date': datetime_to_ISO8601(self.creation_date),
-            'start_validity_secs': datetime_to_ISO8601(self.creation_date +
-                                                       timedelta(seconds=self.start_validity_secs)),
-            'end_validity_secs': datetime_to_ISO8601(self.creation_date +
-                                                     timedelta(seconds=self.end_validity_secs)),
+            'start_validity_secs': self.start_validity_secs,
+            'end_validity_secs': self.end_validity_secs,
             'remaining_allowed_attempts': self.remaining_allowed_attempts,
+            'context_id': self.context_associated,
             'type': self.kind,
             'graph_captcha': self.graph_captcha['question'] if self.graph_captcha else False,
             'human_captcha': self.human_captcha['question'] if self.human_captcha else False,
@@ -218,7 +216,6 @@ class Token(TempObj):
     def proof_of_work_check(self, resolved_proof_of_work):
         pass
 
-
     def validate(self, request):
         """
         @request is the submission;
@@ -227,32 +224,29 @@ class Token(TempObj):
           not yet implemented.
         """
 
-        if not self.remaining_allowed_attempts:
-            TokenList.delete(self.id)
-            raise errors.TokenFailure("Too many attepts")
-        else:
-            log.debug("Token allows other %d attempts" % self.remaining_allowed_attempts)
-
         self.remaining_allowed_attempts -= 1
+        log.debug("Token allows other %d attempts" % self.remaining_allowed_attempts)
 
         # any of these can raise an exception if check fail
         try:
             self.timedelta_check()
 
+            if self.remaining_allowed_attempts < -1:
+                raise errors.TokenFailure("Exhausted Token usage")
+
             if self.human_captcha is not False:
                 self.human_captcha_check(request['human_captcha_answer'])
 
             if self.graph_captcha is not False:
-                assert False, "Graphical Captcha! NotYetImplemented"
+                raise errors.TokenFailure("Graphical Captcha! NotYetImplemented")
 
             # Raise an exception if, by mistake, we ask for something not yet supported
             if self.proof_of_work is not False:
-                assert False, "Proof of Work! NotYetImplemented"
+                raise errors.TokenFailure("Proof of Work! NotYetImplemented")
 
         except Exception:
             log.debug("Error triggered in Token validation, remaining attempts %d => %d" % (
                 self.remaining_allowed_attempts, self.remaining_allowed_attempts - 1))
-            raise errors.TokenFailure("Failed to validate token")
+            raise
 
         # if the code flow reach here, the token is validated
-        log.debug("Token validated properly")

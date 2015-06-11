@@ -13,6 +13,7 @@ from globaleaks.utils.validator import shorttext_v, longtext_v, \
     shortlocal_v, longlocal_v
 from .properties import MetaModel, DateTime
 
+
 def db_forge_obj(store, mock_class, mock_fields):
     obj = mock_class()
     for key, val in mock_fields.iteritems():
@@ -20,9 +21,11 @@ def db_forge_obj(store, mock_class, mock_fields):
     store.add(obj)
     return obj
 
+
 @transact
 def forge_obj(store, mock_class, mock_fields):
     return db_forge_obj(store, mock_class, mock_fields)
+
 
 class BaseModel(Storm):
     """
@@ -161,6 +164,7 @@ class User(Model):
     role = Unicode()
     state = Unicode()
     last_login = DateTime(default_factory=datetime_null)
+    mail_address = Unicode()
     language = Unicode()
     timezone = Int()
     password_change_needed = Bool(default=True)
@@ -170,7 +174,7 @@ class User(Model):
     # states: 'disabled', 'enabled'
 
     unicode_keys = [ 'username', 'password', 'salt', 'role',
-                     'state', 'language' ]
+                     'state', 'language', 'mail_address']
     int_keys = [ 'timezone', 'password_change_needed' ]
 
 
@@ -182,7 +186,8 @@ class Context(Model):
     show_receivers = Bool(default=True)
     maximum_selectable_receivers = Int(default=0)
     select_all_receivers = Bool(default=False)
-    enable_private_messages = Bool(default=True)
+    enable_comments = Bool(default=True)
+    enable_private_messages = Bool(default=False)
 
     tip_timetolive = Int()
     last_update = DateTime(default_factory=datetime_null)
@@ -203,7 +208,7 @@ class Context(Model):
 
     show_receivers_in_alphabetical_order = Bool(default=False)
 
-    presentation_order = Int(default=9)
+    presentation_order = Int(default=0)
 
     unicode_keys = []
     localized_strings = ['name', 'description', 'receiver_introduction']
@@ -235,13 +240,8 @@ class InternalTip(Model):
     wb_steps = JSON()
     expiration_date = DateTime()
     last_activity = DateTime(default_factory=datetime_null)
+
     new = Int(default=True)
-
-    wb_e2e_public = Unicode()
-    is_e2e_encrypted = Bool()
-
-    pgp_glkey_pub = Unicode()
-    pgp_glkey_priv = Unicode()
 
 
 class ReceiverTip(Model):
@@ -260,6 +260,7 @@ class ReceiverTip(Model):
     notification_date = DateTime()
 
     label = Unicode(validator=shortlocal_v, default=u"")
+
     new = Int(default=True)
 
     unicode_keys = ['label']
@@ -274,10 +275,9 @@ class WhistleblowerTip(Model):
     """
     internaltip_id = Unicode()
     # internaltip = Reference(WhistleblowerTip.internaltip_id, InternalTip.id)
+    receipt_hash = Unicode()
     last_access = DateTime(default_factory=datetime_null)
     access_counter = Int(default=0)
-    wb_signature = Unicode()
-    receipt_hash = Unicode()
 
 
 class ReceiverFile(Model):
@@ -319,11 +319,11 @@ class InternalFile(Model):
 
     name = Unicode(validator=longtext_v)
     file_path = Unicode()
+
     content_type = Unicode()
     size = Int()
-    new = Int(default=True)
 
-    is_e2e_encrypted = Bool(default=False)
+    new = Int(default=True)
 
 
 class Comment(Model):
@@ -397,13 +397,13 @@ class Node(Model):
     tor2web_unauth = Bool()
     allow_unencrypted = Bool()
     allow_iframes_inclusion = Bool()
+    submission_minimum_delay = Int(default=10)
+    submission_maximum_ttl = Int(default=10800)
 
     # privileges configurable in node/context/receiver
     can_postpone_expiration = Bool(default=False)
     can_delete_submission = Bool(default=False)
 
-    file_encryption_e2e = Bool(default=True)
-    submission_data_e2e = Bool(default=True)
     ahmia = Bool(default=False)
     wizard_done = Bool(default=False)
 
@@ -435,7 +435,9 @@ class Node(Model):
 
     int_keys = ['maximum_namesize', 'maximum_textsize',
                 'maximum_filesize', 'default_timezone',
-                'show_contexts_in_alphabetical_order']
+                'show_contexts_in_alphabetical_order',
+                'submission_minimum_delay',
+                'submission_maximum_ttl' ]
 
     bool_keys = ['tor2web_admin', 'tor2web_receiver', 'tor2web_submission',
                  'tor2web_unauth', 'can_postpone_expiration',
@@ -477,47 +479,45 @@ class Notification(Model):
 
     torify = Int(default=True)
 
-    admin_anomaly_template = JSON(validator=longlocal_v)
-    admin_anomaly_mail_title = JSON(validator=longlocal_v)
-
-    encrypted_tip_template = JSON(validator=longlocal_v)
-    encrypted_tip_mail_title = JSON(validator=longlocal_v)
-    plaintext_tip_template = JSON(validator=longlocal_v)
-    plaintext_tip_mail_title = JSON(validator=longlocal_v)
-
-    encrypted_file_template = JSON(validator=longlocal_v)
-    encrypted_file_mail_title = JSON(validator=longlocal_v)
-    plaintext_file_template = JSON(validator=longlocal_v)
-    plaintext_file_mail_title = JSON(validator=longlocal_v)
-
-    encrypted_comment_template = JSON(validator=longlocal_v)
-    encrypted_comment_mail_title = JSON(validator=longlocal_v)
-    plaintext_comment_template = JSON(validator=longlocal_v)
-    plaintext_comment_mail_title = JSON(validator=longlocal_v)
-
-    encrypted_message_template = JSON(validator=longlocal_v)
-    encrypted_message_mail_title = JSON(validator=longlocal_v)
-    plaintext_message_template = JSON(validator=longlocal_v)
-    plaintext_message_mail_title = JSON(validator=longlocal_v)
-
-    tip_expiration_template = JSON(validator=longlocal_v)
-    tip_expiration_mail_title = JSON(validator=longlocal_v)
-
+    # Admin Template
     admin_pgp_alert_mail_title = JSON(validator=longlocal_v)
     admin_pgp_alert_mail_template = JSON(validator=longlocal_v)
+    admin_anomaly_mail_template = JSON(validator=longlocal_v)
+    admin_anomaly_mail_title = JSON(validator=longlocal_v)
+    admin_anomaly_disk_low = JSON(validator=longlocal_v)
+    admin_anomaly_disk_medium = JSON(validator=longlocal_v)
+    admin_anomaly_disk_high = JSON(validator=longlocal_v)
+    admin_anomaly_activities = JSON(validator=longlocal_v)
+
+    # Receiver Template
+    tip_mail_template = JSON(validator=longlocal_v)
+    tip_mail_title = JSON(validator=longlocal_v)
+    file_mail_template = JSON(validator=longlocal_v)
+    file_mail_title = JSON(validator=longlocal_v)
+    comment_mail_template = JSON(validator=longlocal_v)
+    comment_mail_title = JSON(validator=longlocal_v)
+    message_mail_template = JSON(validator=longlocal_v)
+    message_mail_title = JSON(validator=longlocal_v)
+    tip_expiration_mail_template = JSON(validator=longlocal_v)
+    tip_expiration_mail_title = JSON(validator=longlocal_v)
     pgp_alert_mail_title = JSON(validator=longlocal_v)
     pgp_alert_mail_template = JSON(validator=longlocal_v)
-
-    notification_digest_mail_title = JSON(validator=longlocal_v)
-
+    receiver_threshold_reached_mail_template = JSON(validator=longlocal_v)
+    receiver_threshold_reached_mail_title = JSON(validator=longlocal_v)
     zip_description = JSON(validator=longlocal_v)
 
+    # Experimental Receiver template
     ping_mail_template = JSON(validator=longlocal_v)
     ping_mail_title = JSON(validator=longlocal_v)
+    notification_digest_mail_title = JSON(validator=longlocal_v)
 
     disable_admin_notification_emails = Bool(default=False)
     disable_receivers_notification_emails = Bool(default=False)
     send_email_for_every_event = Bool(default=True)
+
+    tip_expiration_threshold = Int(default=72)
+    notification_threshold_per_hour = Int(default=20)
+    notification_suspension_time=Int(default=(2 * 3600))
 
     unicode_keys = [
         'server',
@@ -530,37 +530,38 @@ class Notification(Model):
 
     localized_strings = [
         'admin_anomaly_mail_title',
-        'admin_anomaly_template',
+        'admin_anomaly_mail_template',
+        'admin_anomaly_disk_low',
+        'admin_anomaly_disk_medium',
+        'admin_anomaly_disk_high',
+        'admin_anomaly_activities',
         'admin_pgp_alert_mail_title',
         'admin_pgp_alert_mail_template',
         'pgp_alert_mail_title',
         'pgp_alert_mail_template',
-        'encrypted_tip_template',
-        'encrypted_tip_mail_title',
-        'plaintext_tip_template',
-        'plaintext_tip_mail_title',
-        'encrypted_file_template',
-        'encrypted_file_mail_title',
-        'plaintext_file_template',
-        'plaintext_file_mail_title',
-        'encrypted_comment_template',
-        'encrypted_comment_mail_title',
-        'plaintext_comment_template',
-        'plaintext_comment_mail_title',
-        'encrypted_message_template',
-        'encrypted_message_mail_title',
-        'plaintext_message_template',
-        'plaintext_message_mail_title',
-        'tip_expiration_template',
+        'tip_mail_template',
+        'tip_mail_title',
+        'file_mail_template',
+        'file_mail_title',
+        'comment_mail_template',
+        'comment_mail_title',
+        'message_mail_template',
+        'message_mail_title',
+        'tip_expiration_mail_template',
         'tip_expiration_mail_title',
         'notification_digest_mail_title',
         'zip_description',
         'ping_mail_template',
-        'ping_mail_title'
+        'ping_mail_title',
+        'receiver_threshold_reached_mail_template',
+        'receiver_threshold_reached_mail_title'
     ]
 
     int_keys = [
         'port',
+        'tip_expiration_threshold',
+        'notification_threshold_per_hour',
+        'notification_suspension_time'
     ]
 
     bool_keys = [
@@ -575,9 +576,6 @@ class Receiver(Model):
     name, description, password and notification_fields, can be changed
     by Receiver itself
     """
-    user_id = Unicode()
-    # Receiver.user = Reference(Receiver.user_id, User.id)
-
     name = Unicode(validator=shorttext_v)
 
     # localization strings
@@ -586,34 +584,15 @@ class Receiver(Model):
     configuration = Unicode()
     # configurations: 'default', 'forcefully_selected', 'unselectable'
 
-<<<<<<< HEAD
     # of PGP key fields
     pgp_key_info = Unicode()
     pgp_key_fingerprint = Unicode()
-
     pgp_key_public = Unicode()
     pgp_key_expiration = DateTime()
+
     pgp_key_status = Unicode()
     # pgp_statuses: 'disabled', 'enabled'
 
-    pgp_e2e_public  = Unicode()
-    pgp_e2e_private = Unicode()
-=======
-    # of GPG key fields
-    gpg_key_info = Unicode()
-    gpg_key_fingerprint = Unicode()
-    gpg_key_armor = Unicode()
-    gpg_key_expiration = DateTime()
-    gpg_key_status = Unicode()
-    # gpg_statuses = [u'disabled', u'enabled']
->>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
-
-    pgp_key_armor_priv = Unicode()
-    pgp_glkey_pub = Unicode()
-    pgp_glkey_priv = Unicode()
-
-    # Can be changed only by admin (but also differ from username!)
-    mail_address = Unicode()
     # Can be changed by the user itself
     ping_mail_address = Unicode()
 
@@ -626,20 +605,27 @@ class Receiver(Model):
     tip_notification = Bool(default=True)
     ping_notification = Bool(default=False)
 
+    tip_expiration_threshold = Int(default=72)
+
     # contexts = ReferenceSet("Context.id",
     #                         "ReceiverContext.context_id",
     #                         "ReceiverContext.receiver_id",
     #                         "Receiver.id")
 
-    presentation_order = Int(default=9)
+    presentation_order = Int(default=0)
 
-    unicode_keys = ['name', 'mail_address',
-                    'ping_mail_address', 'configuration']
+    unicode_keys = ['name', 'configuration', 'ping_mail_address']
+
     localized_strings = ['description']
-    int_keys = ['presentation_order']
-    bool_keys = ['can_delete_submission', 'tip_notification',
-                 'can_postpone_expiration',
-                 'ping_notification']
+
+    int_keys = ['presentation_order', 'tip_expiration_threshold']
+
+    bool_keys = [
+        'can_delete_submission',
+        'can_postpone_expiration',
+        'tip_notification',
+        'ping_notification'
+    ]
 
 
 class EventLogs(Model):
@@ -659,22 +645,22 @@ class Field(Model):
     description = JSON(validator=longlocal_v)
     hint = JSON(validator=longlocal_v)
 
-    multi_entry = Bool()
-    required = Bool()
-    preview = Bool()
+    multi_entry = Bool(default=False)
+    required = Bool(default=False)
+    preview = Bool(default=False)
 
     # This is set if the field should be duplicated for collecting statistics
     # when encryption is enabled.
-    stats_enabled = Bool()
+    stats_enabled = Bool(default=False)
 
     # This indicates that this field should be used as a template for composing
     # new steps.
-    is_template = Bool()
+    is_template = Bool(default=False)
 
-    x = Int()
-    y = Int()
+    x = Int(default=0)
+    y = Int(default=0)
 
-    type = Unicode()
+    type = Unicode(default=u'inputbox')
     # Supported field types:
     # * inputbox
     # * textarea
@@ -718,11 +704,11 @@ class Field(Model):
 
 class FieldOption(Model):
     field_id = Unicode()
-    number = Int()
+    presentation_order = Int()
     attrs = JSON()
 
     unicode_keys = ['field_id']
-    int_keys = ['number']
+    int_keys = ['presentation_order']
     json_keys = ['attrs']
 
     def __init__(self, attrs=None, localized_keys=None):
@@ -752,7 +738,7 @@ class FieldOption(Model):
     def copy(self, store):
         obj_copy = self.__class__()
         obj_copy.field_id = self.field_id
-        obj_copy.number = self.number
+        obj_copy.presentation_order = self.presentation_order
         obj_copy.attrs = copy.deepcopy(self.attrs)
         return obj_copy
 
@@ -762,10 +748,10 @@ class Step(Model):
     label = JSON()
     description = JSON()
     hint = JSON()
-    number = Int()
+    presentation_order = Int()
 
     unicode_keys = ['context_id']
-    int_keys = ['number']
+    int_keys = ['presentation_order']
     localized_strings = ['label', 'description', 'hint']
 
 
@@ -839,57 +825,83 @@ class ReceiverInternalTip(BaseModel):
     internaltip_id = Unicode()
 
 
-Field.options = ReferenceSet(Field.id,
-                             FieldOption.field_id)
+Field.options = ReferenceSet(
+    Field.id,
+    FieldOption.field_id
+)
 
 FieldOption.field = Reference(FieldOption.field_id, Field.id)
 
-Context.steps = ReferenceSet(Context.id,
-                             Step.context_id)
+Context.steps = ReferenceSet(Context.id, Step.context_id)
 
 Step.context = Reference(Step.context_id, Context.id)
 
 # _*_# References tracking below #_*_#
-Receiver.user = Reference(Receiver.user_id, User.id)
+Receiver.user = Reference(Receiver.id, User.id)
 
-Receiver.internaltips = ReferenceSet(Receiver.id,
-                                     ReceiverInternalTip.receiver_id,
-                                     ReceiverInternalTip.internaltip_id,
-                                     InternalTip.id)
+Receiver.internaltips = ReferenceSet(
+    Receiver.id,
+    ReceiverInternalTip.receiver_id,
+    ReceiverInternalTip.internaltip_id,
+    InternalTip.id
+)
 
-InternalTip.receivers = ReferenceSet(InternalTip.id,
-                                     ReceiverInternalTip.internaltip_id,
-                                     ReceiverInternalTip.receiver_id,
-                                     Receiver.id)
+InternalTip.receivers = ReferenceSet(
+    InternalTip.id,
+    ReceiverInternalTip.internaltip_id,
+    ReceiverInternalTip.receiver_id,
+    Receiver.id
+)
 
-InternalTip.context = Reference(InternalTip.context_id,
-                                Context.id)
+InternalTip.context = Reference(
+    InternalTip.context_id,
+    Context.id
+)
 
-InternalTip.comments = ReferenceSet(InternalTip.id,
-                                    Comment.internaltip_id)
+InternalTip.comments = ReferenceSet(
+    InternalTip.id,
+    Comment.internaltip_id
+)
 
-InternalTip.receivertips = ReferenceSet(InternalTip.id,
-                                        ReceiverTip.internaltip_id)
+InternalTip.receivertips = ReferenceSet(
+    InternalTip.id,
+    ReceiverTip.internaltip_id
+)
 
-InternalTip.internalfiles = ReferenceSet(InternalTip.id,
-                                         InternalFile.internaltip_id)
+InternalTip.internalfiles = ReferenceSet(
+    InternalTip.id,
+    InternalFile.internaltip_id
+)
 
-ReceiverFile.internalfile = Reference(ReceiverFile.internalfile_id,
-                                      InternalFile.id)
+ReceiverFile.internalfile = Reference(
+    ReceiverFile.internalfile_id,
+    InternalFile.id
+)
 
-ReceiverFile.receiver = Reference(ReceiverFile.receiver_id, Receiver.id)
+ReceiverFile.receiver = Reference(
+    ReceiverFile.receiver_id,
+    Receiver.id
+)
 
-ReceiverFile.internaltip = Reference(ReceiverFile.internaltip_id,
-                                     InternalTip.id)
+ReceiverFile.internaltip = Reference(
+    ReceiverFile.internaltip_id,
+    InternalTip.id
+)
 
-ReceiverFile.receivertip = Reference(ReceiverFile.receivertip_id,
-                                     ReceiverTip.id)
+ReceiverFile.receivertip = Reference(
+    ReceiverFile.receivertip_id,
+    ReceiverTip.id
+)
 
-WhistleblowerTip.internaltip = Reference(WhistleblowerTip.internaltip_id,
-                                         InternalTip.id)
+WhistleblowerTip.internaltip = Reference(
+    WhistleblowerTip.internaltip_id,
+    InternalTip.id
+)
 
-InternalFile.internaltip = Reference(InternalFile.internaltip_id,
-                                     InternalTip.id)
+InternalFile.internaltip = Reference(
+    InternalFile.internaltip_id,
+    InternalTip.id
+)
 
 ReceiverTip.internaltip = Reference(ReceiverTip.internaltip_id, InternalTip.id)
 
@@ -908,28 +920,32 @@ Field.children = ReferenceSet(
     Field.id,
     FieldField.parent_id,
     FieldField.child_id,
-    Field.id)
+    Field.id
+)
 
 Step.children = ReferenceSet(
     Step.id,
     StepField.step_id,
     StepField.field_id,
-    Field.id)
+    Field.id
+)
 
 Context.receivers = ReferenceSet(
     Context.id,
     ReceiverContext.context_id,
     ReceiverContext.receiver_id,
-    Receiver.id)
+    Receiver.id
+)
 
 Receiver.contexts = ReferenceSet(
     Receiver.id,
     ReceiverContext.receiver_id,
     ReceiverContext.context_id,
-    Context.id)
+    Context.id
+)
 
-models = [Node, User, Context, Receiver, ReceiverContext,
-          Field, FieldOption, FieldField, Step, StepField,
-          InternalTip, ReceiverTip, WhistleblowerTip, Comment, Message,
-          InternalFile, ReceiverFile, Notification,
-          Stats, Anomalies, ApplicationData, EventLogs]
+models_list = [Node, User, Context, Receiver, ReceiverContext,
+               Field, FieldOption, FieldField, Step, StepField,
+               InternalTip, ReceiverTip, WhistleblowerTip, Comment, Message,
+               InternalFile, ReceiverFile, Notification,
+               Stats, Anomalies, ApplicationData, EventLogs]

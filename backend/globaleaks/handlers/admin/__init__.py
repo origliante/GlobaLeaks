@@ -6,9 +6,9 @@
 #
 import copy
 import shutil
+from storm.exceptions import DatabaseError
 
-from globaleaks import security, LANGUAGES_SUPPORTED_CODES, LANGUAGES_SUPPORTED
-from globaleaks.handlers.base import GLApiCache
+from globaleaks import models, security, LANGUAGES_SUPPORTED_CODES, LANGUAGES_SUPPORTED
 from globaleaks.handlers.admin.field import disassociate_field, get_field_association
 from globaleaks.handlers.admin.langfiles import *
 from globaleaks.handlers.admin.staticfiles import *
@@ -16,8 +16,8 @@ from globaleaks.handlers.admin.overview import *
 from globaleaks.handlers.admin.statistics import *
 from globaleaks.handlers.admin.notification import *
 from globaleaks.handlers.node import anon_serialize_step
-from globaleaks import models
 from globaleaks.rest import errors, requests
+from globaleaks.rest.apicache import GLApiCache
 from globaleaks.security import GLBPGP
 from globaleaks.settings import transact, transact_ro, GLSetting
 from globaleaks.third_party import rstr
@@ -63,6 +63,8 @@ def db_admin_serialize_node(store, language):
         'tor2web_submission': GLSetting.memory_copy.tor2web_submission,
         'tor2web_receiver': GLSetting.memory_copy.tor2web_receiver,
         'tor2web_unauth': GLSetting.memory_copy.tor2web_unauth,
+        'submission_minimum_delay' : GLSetting.memory_copy.submission_minimum_delay,
+        'submission_maximum_ttl' : GLSetting.memory_copy.submission_maximum_ttl,
         'can_postpone_expiration': node.can_postpone_expiration,
         'can_delete_submission': node.can_delete_submission,
         'ahmia': node.ahmia,
@@ -80,11 +82,7 @@ def db_admin_serialize_node(store, language):
         'admin_language': admin.language,
         'admin_timezone': admin.timezone,
         'enable_custom_privacy_badge': node.enable_custom_privacy_badge,
-        'custom_privacy_badge_tor': node.custom_privacy_badge_tor,
-        'custom_privacy_badge_none': node.custom_privacy_badge_none,
         'landing_page': node.landing_page,
-        'file_encryption_e2e': node.file_encryption_e2e,
-        'submission_data_e2e': node.submission_data_e2e,
         'show_contexts_in_alphabetical_order': node.show_contexts_in_alphabetical_order
     }
 
@@ -135,10 +133,8 @@ def db_create_step(store, context, steps, language):
     :param steps: a dictionary containing the new steps.
     :param language: the language of the specified steps.
     """
-    n = 1
     for step in steps:
         step['context_id'] = context.id
-        step['number'] = n
 
         fill_localized_keys(step, models.Step.localized_strings, language)
 
@@ -154,8 +150,6 @@ def db_create_step(store, context, steps, language):
             if a_s != s.id:
                 disassociate_field(store, field.id)
                 s.children.add(field)
-
-        n += 1
 
 def db_update_steps(store, context, steps, language):
     """
@@ -173,10 +167,8 @@ def db_update_steps(store, context, steps, language):
         indexed_old_steps[o.id] = o
 
     new_steps = []
-    n = 1
     for step in steps:
         step['context_id'] = context.id
-        step['number'] = n
 
         fill_localized_keys(step, models.Step.localized_strings, language)
 
@@ -188,11 +180,11 @@ def db_update_steps(store, context, steps, language):
 
             s.update(step)
 
-            new_steps.append(indexed_old_steps[step['id']])
             del indexed_old_steps[step['id']]
         else:
             s = models.Step(step)
-            new_steps.append(s)
+
+        new_steps.append(s)
 
         i = 1
         for children in step['children']:
@@ -214,8 +206,6 @@ def db_update_steps(store, context, steps, language):
             else: # the else condition means a_s == s.id; already associated!
                 pass
 
-        n += 1
-
     for o_id in indexed_old_steps:
         store.remove(indexed_old_steps[o_id])
 
@@ -232,7 +222,7 @@ def admin_serialize_context(store, context, language):
     :return: a dictionary representing the serialization of the context.
     """
     steps = [anon_serialize_step(store, s, language)
-                for s in context.steps.order_by(models.Step.number)]
+                for s in context.steps.order_by(models.Step.presentation_order)]
 
     ret_dict = {
         'id': context.id,
@@ -247,6 +237,7 @@ def admin_serialize_context(store, context, language):
         'maximum_selectable_receivers': context.maximum_selectable_receivers,
         'show_small_cards': context.show_small_cards,
         'show_receivers': context.show_receivers,
+        'enable_comments': context.enable_comments,
         'enable_private_messages': context.enable_private_messages,
         'presentation_order': context.presentation_order,
         'show_receivers_in_alphabetical_order': context.show_receivers_in_alphabetical_order,
@@ -272,52 +263,25 @@ def admin_serialize_receiver(receiver, language):
         'can_delete_submission': receiver.can_delete_submission,
         'can_postpone_expiration': receiver.can_postpone_expiration,
         'username': receiver.user.username,
-        'mail_address': receiver.mail_address,
+        'mail_address': receiver.user.mail_address,
         'ping_mail_address': receiver.ping_mail_address,
-<<<<<<< HEAD
         'password': u'',
         'state': receiver.user.state,
         'configuration': receiver.configuration,
         'contexts': [c.id for c in receiver.contexts],
-        'pgp_key_public': receiver.pgp_key_public,
-        'pgp_key_private': '',
-        'pgp_key_remove': False,
         'pgp_key_info': receiver.pgp_key_info,
+        'pgp_key_public': receiver.pgp_key_public,
+        'pgp_key_remove': False,
         'pgp_key_fingerprint': receiver.pgp_key_fingerprint,
         'pgp_key_expiration': datetime_to_ISO8601(receiver.pgp_key_expiration),
         'pgp_key_status': receiver.pgp_key_status,
-        'pgp_e2e_public': '',
-        'pgp_e2e_private': '',
         'tip_notification': receiver.tip_notification,
         'ping_notification': receiver.ping_notification,
         'presentation_order': receiver.presentation_order,
         'language': receiver.user.language,
         'timezone': receiver.user.timezone,
-        'password_change_needed': receiver.user.password_change_needed
-=======
-        "password": u"",
-        "state": receiver.user.state,
-        "configuration": receiver.configuration,
-        "contexts": [c.id for c in receiver.contexts],
-        "gpg_key_info": receiver.gpg_key_info,
-        "gpg_key_armor": receiver.gpg_key_armor,
-        "gpg_key_remove": False,
-        "gpg_key_fingerprint": receiver.gpg_key_fingerprint,
-        "gpg_key_expiration": datetime_to_ISO8601(receiver.gpg_key_expiration),
-        "gpg_key_status": receiver.gpg_key_status,
-        "pgp_key_armor_priv": receiver.pgp_key_armor_priv,
-        "pgp_glkey_pub": receiver.pgp_glkey_pub,
-        "pgp_glkey_priv": receiver.pgp_glkey_priv,
-        "comment_notification": receiver.comment_notification,
-        "tip_notification": receiver.tip_notification,
-        "file_notification": receiver.file_notification,
-        "message_notification": receiver.message_notification,
-        "ping_notification": receiver.ping_notification,
-        "presentation_order": receiver.presentation_order,
-        "language": receiver.user.language,
-        "timezone": receiver.user.timezone,
-        "password_change_needed": receiver.user.password_change_needed
->>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
+        'tip_expiration_threshold': receiver.tip_expiration_threshold,
+        'password_change_needed': receiver.user.password_change_needed,
     }
 
     return get_localized_values(ret_dict, receiver, receiver.localized_strings, language)
@@ -337,8 +301,9 @@ def db_update_node(store, request, wizard_done, language):
 
     admin = store.find(models.User, (models.User.username == unicode('admin'))).one()
 
-    admin.language = request.get('admin_language', GLSetting.memory_copy.language)
-    admin.timezone = request.get('admin_timezone', GLSetting.memory_copy.default_timezone)
+    admin.mail_address = request['email']
+    admin.language = request['admin_language']
+    admin.timezone = request['admin_timezone']
 
     password = request.get('password', None)
     old_password = request.get('old_password', None)
@@ -454,13 +419,13 @@ def db_setup_default_steps(store, context):
             for o_child in o_children:
                 o = models.db_forge_obj(store, models.FieldOption, o_child)
                 o.field_id = f.id
-                o.number = n_o
+                o.presentation_order = n_o
                 f.options.add(o)
                 n_o += 1
             f.step_id = s.id
             s.children.add(f)
         s.context_id = context.id
-        s.number = n_s
+        s.presentation_order = n_s
         context.steps.add(s)
         n_s += 1
 
@@ -690,6 +655,11 @@ def db_create_receiver(store, request, language):
     receiver_salt = security.get_salt(rstr.xeger('[A-Za-z0-9]{56}'))
     receiver_password = security.hash_password(password, receiver_salt)
 
+    # ping_mail_address is duplicated at creation time from mail_address
+    request.update({'ping_mail_address': request['mail_address']})
+
+    receiver = models.Receiver(request)
+
     receiver_user_dict = {
         'username': uuid4(),
         'password': receiver_password,
@@ -699,22 +669,18 @@ def db_create_receiver(store, request, language):
         'language': u'en',
         'timezone': 0,
         'password_change_needed': True,
+        'mail_address': request['mail_address']
     }
 
     receiver_user = models.User(receiver_user_dict)
-    store.add(receiver_user)
-
-    # ping_mail_address is duplicated at creation time from mail_address
-    request.update({'ping_mail_address': request['mail_address']})
-
-    receiver = models.Receiver(request)
-    receiver.user = receiver_user
 
     # The various options related in manage PGP keys are used here.
     pgp_options_parse(receiver, request)
 
-    log.debug("Creating receiver %s" % receiver.user.username)
+    # Set receiver.id = receiver.user.username = receiver.user.id
+    receiver.id = receiver_user.username = receiver_user.id
 
+    store.add(receiver_user)
     store.add(receiver)
 
     create_random_receiver_portrait(receiver.id)
@@ -726,6 +692,8 @@ def db_create_receiver(store, request, language):
             log.err("Creation error: invalid Context can't be associated")
             raise errors.ContextIdNotFound
         context.receivers.add(receiver)
+
+    log.debug("Created receiver %s" % receiver.user.username)
 
     return admin_serialize_receiver(receiver, language)
 
@@ -768,6 +736,7 @@ def update_receiver(store, receiver_id, request, language):
 
     receiver.user.state = request['state']
     receiver.user.password_change_needed = request['password_change_needed']
+    receiver.user.mail_address = request['mail_address']
 
     # The various options related in manage PGP keys are used here.
     pgp_options_parse(receiver, request)
@@ -794,6 +763,7 @@ def update_receiver(store, receiver_id, request, language):
         receiver.contexts.add(context)
 
     receiver.last_update = datetime_now()
+
     try:
         receiver.update(request)
     except DatabaseError as dberror:

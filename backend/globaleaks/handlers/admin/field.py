@@ -9,11 +9,12 @@ import json
 from storm.expr import And
 from twisted.internet.defer import inlineCallbacks
 from globaleaks import models
-from globaleaks.handlers.base import BaseHandler, GLApiCache
+from globaleaks.handlers.base import BaseHandler
 from globaleaks.handlers.authentication import authenticated, transport_security_check
 from globaleaks.handlers.node import anon_serialize_field, \
     get_field_option_localized_keys, get_public_context_list
 from globaleaks.rest import errors, requests
+from globaleaks.rest.apicache import GLApiCache
 from globaleaks.settings import transact, transact_ro
 from globaleaks.utils.structures import fill_localized_keys
 from globaleaks.utils.utility import log
@@ -95,7 +96,7 @@ def db_update_options(store, field_id, options, language):
     new_options = []
     n = 1
     for option in options:
-        opt_dict = {'field_id': field_id, 'number': n}
+        opt_dict = {'field_id': field_id, 'presentation_order': n}
 
         keys = get_field_option_localized_keys(field.type)
         fill_localized_keys(option['attrs'], keys, language)

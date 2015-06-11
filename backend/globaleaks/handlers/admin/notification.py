@@ -21,7 +21,10 @@ def admin_serialize_notification(notif, language):
         'disable_admin_notification_emails': notif.disable_admin_notification_emails,
         'disable_receivers_notification_emails': notif.disable_receivers_notification_emails,
         'send_email_for_every_event': notif.send_email_for_every_event,
-        'reset_templates': False
+        'reset_templates': False,
+        'tip_expiration_threshold': notif.tip_expiration_threshold,
+        'notification_threshold_per_hour': notif.notification_threshold_per_hour,
+        'notification_suspension_time': notif.notification_suspension_time
     }
 
     return get_localized_values(ret_dict, notif, notif.localized_strings, language)
@@ -80,7 +83,6 @@ class NotificationInstance(BaseHandler):
 
         Changes the node notification settings.
         """
-
         request = self.validate_message(self.request.body,
             requests.AdminNotificationDesc)
 

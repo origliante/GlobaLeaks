@@ -196,74 +196,39 @@ def transport_security_check(wrapped_handler_role):
 
 
 @transact_ro  # read only transact; manual commit on success needed
-def login_wb(store, authentication_sign):
+def login_wb(store, receipt):
     """
     Login wb return the WhistleblowerTip.id
     """
-
-    wb_tip = None
-    if len(authentication_sign) == 16:
-        node = store.find(Node).one()
-        hashed_receipt = security.hash_password(authentication_sign, node.receipt_salt)
-        wb_tip = store.find(WhistleblowerTip,
+    node = store.find(Node).one()
+    hashed_receipt = security.hash_password(receipt, node.receipt_salt)
+    wb_tip = store.find(WhistleblowerTip,
                         WhistleblowerTip.receipt_hash == unicode(hashed_receipt)).one()
 
-    else:
-        wb_tip = store.find(WhistleblowerTip,
-                        WhistleblowerTip.wb_signature == unicode(authentication_sign)).one()
-
-
     if not wb_tip:
-        log.debug("Whistleblower login: Authentication failure")
-        return False
+        log.debug("Whistleblower login: Invalid receipt")
+        return None, None, None
 
     log.debug("Whistleblower login: Valid receipt")
     wb_tip.last_access = utility.datetime_now()
     store.commit()  # the transact was read only! on success we apply the commit()
-    return wb_tip.id
+    return wb_tip.id, 'enabled', False
 
 
 @transact_ro  # read only transact; manual commit on success needed
-def login_receiver(store, receiver_id, password):
+def login(store, username, password, role):
     """
-    This login receiver need to collect also the amount of unsuccessful
-    consecutive logins, because this element may bring to password lockdown.
-
-    login_receivers returns a tuple (receiver_id, state, pcn)
-    """
-    receiver = store.find(Receiver, (Receiver.id == receiver_id)).one()
-
-    if not receiver or \
-                    receiver.user.role != u'receiver' or \
-                    receiver.user.state == u'disabled' or \
-            not security.check_password(password,
-                                        receiver.user.password,
-                                        receiver.user.salt):
-        log.debug("Receiver login: Invalid credentials")
-        return False, None, None
-
-    log.debug("Receiver login: Authorized receiver")
-    receiver.user.last_login = utility.datetime_now()
-    store.commit()  # the transact was read only! on success we apply the commit()
-    return receiver.id, receiver.user.state, receiver.user.password_change_needed
-
-
-@transact_ro  # read only transact; manual commit on success needed
-def login_admin(store, username, password):
-    """
-    login_admin returns a tuple (user_id, state, pcn)
+    login returns a tuple (user_id, state, pcn)
     """
     user = store.find(User, And(User.username == username,
-                                User.role == u'admin',
+                                User.role == role,
                                 User.state != u'disabled')).one()
 
-    if not user or not security.check_password(password,
-                                               user.password,
-                                               user.salt):
-        log.debug("Admin login: Invalid credentials")
-        return False, None, None
+    if not user or not security.check_password(password,  user.password, user.salt):
+        log.debug("Login: Invalid credentials (%s)" % role)
+        return None, None, None
 
-    log.debug("Admin login: Authorized admin")
+    log.debug("Login: Success (%s)" % role)
     user.last_login = utility.datetime_now()
     store.commit()  # the transact was read only! on success we apply the commit()
     return user.id, user.state, user.password_change_needed
@@ -331,18 +296,15 @@ class AuthenticationHandler(BaseHandler):
             else:
                 log.debug("Accepted login request on Tor2web for role '%s'" % role)
 
-        if role == 'admin':
-            user_id, status, pcn = yield login_admin(username, password)
+        if role == 'receiver' or role == 'admin':
+            user_id, status, pcn = yield login(username, password, role)
 
         elif role == 'wb':
-            user_id = yield login_wb(password)
-            status = 'enabled'
-            pcn = False
+            user_id, status, pcn = yield login_wb(password)
 
-        else:  # role == 'receiver'
-            user_id, status, pcn = yield login_receiver(username, password)
+        yield self.uniform_answers_delay()
 
-        if user_id is False:
+        if user_id is None:
             GLSetting.failed_login_attempts += 1
             raise errors.InvalidAuthentication
 
@@ -354,10 +316,9 @@ class AuthenticationHandler(BaseHandler):
             'user_id': session.user_id,
             'session_expiration': int(GLSetting.sessions[session.id].getTime()),
             'status': session.user_status,
-            'password_change_needed': pcn
+            'password_change_needed': pcn,
         }
 
-        yield self.uniform_answers_delay()
         self.write(auth_answer)
 
     @authenticated('*')

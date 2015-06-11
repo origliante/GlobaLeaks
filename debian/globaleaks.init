@@ -61,7 +61,7 @@ if [ "$EUID" -ne "0" ]; then
    exit 0
 fi
 
-GLBACKEND_PIDFILE=/var/run/globaleaks/globaleaks-${LISTENING_PORT}.pid
+GLBACKEND_PIDFILE=/var/run/globaleaks/globaleaks.pid
 
 if [ "${TRAVIS}" = "true" ]; then
     NETWORK_SANDBOXING=0
@@ -242,7 +242,7 @@ do_start()
     fi
 
     if [ "${DISABLE_MAIL_TORIFICATION}" -eq "1" ]; then
-        GLBACKEND_ARGS+=" --disable-mail-torification"
+        GLBACKEND_ARGS+=" --disable-email-torification"
     fi
 
     STARTCMD="${GLBACKEND_DAEMON} ${GLBACKEND_ARGS}"

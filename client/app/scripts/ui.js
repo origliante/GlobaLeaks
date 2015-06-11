@@ -64,7 +64,7 @@ angular.module('submissionUI', []).
             }
           }
           $(elm).val(result);
-          if (result.length == 19) {
+          if (result.length === 19) {
             ngModel.$setValidity('keycodevalidator', true);
           }
           return result;
@@ -191,5 +191,5 @@ angular.module('submissionUI', []).
           ccnumber.innerHTML = scope.creditCard();
         });
       }
-    }
+    };
 }]);

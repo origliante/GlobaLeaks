@@ -20,7 +20,7 @@ from globaleaks.db.datainit import init_appdata, init_db, load_appdata
 
 
 def init_models():
-    for model in models.models:
+    for model in models.models_list:
         model()
     return succeed(None)
 
@@ -91,6 +91,8 @@ def create_tables(create_node=True):
             'tor2web_submission': GLSetting.defaults.tor2web_submission,
             'tor2web_receiver': GLSetting.defaults.tor2web_receiver,
             'tor2web_unauth': GLSetting.defaults.tor2web_unauth,
+            'submission_minimum_delay' : GLSetting.defaults.submission_minimum_delay,
+            'submission_maximum_ttl' : GLSetting.defaults.submission_maximum_ttl,
             'can_postpone_expiration': False,  # disabled by default
             'can_delete_submission': False,  # disabled too
             'ahmia': False,  # disabled too
@@ -152,7 +154,6 @@ def find_current_db_version(dirpath, filearray):
         abspath = os.path.join(dirpath, single_file)
 
         if abspath[-3:] == '.db':
-
             nameindex = abspath.rfind('glbackend')
             extensindex = abspath.rfind('.db')
 
@@ -172,13 +173,15 @@ def check_db_files():
     for (path, _, files) in os.walk(GLSetting.gldb_path):
 
         try:
-            starting_ver, abspath = find_current_db_version(path, files)
+            starting_ver, _ = find_current_db_version(path, files)
+
+            print "Database version detected: %d" % starting_ver
 
             if starting_ver < GLSetting.db_version:
                 print "Performing update of Database from version %d to version %d" % \
                       (starting_ver, GLSetting.db_version)
                 try:
-                    updater_manager.perform_version_update(starting_ver, GLSetting.db_version, abspath)
+                    updater_manager.perform_version_update(starting_ver, GLSetting.db_version)
                     print "GlobaLeaks database version %d: update complete!" % GLSetting.db_version
                 except Exception:
                     print "GlobaLeaks database version %d: update failure :(" % GLSetting.db_version
@@ -186,8 +189,6 @@ def check_db_files():
                     _, _, exc_traceback = sys.exc_info()
                     traceback.print_tb(exc_traceback)
                     quit(-1)
-
-                print "Database version detected: %d" % GLSetting.db_version
 
         except AssertionError:
             print "Error: More than one database file has been found in %s" % path

@@ -30,24 +30,6 @@ GLClient.controller('TipCtrl', ['$scope', '$http', '$route', '$location', '$moda
 
   };
 
-  $scope.$watch('msg_receiver_selected', function(){
-    if ($scope.msg_receiver_selected) {
-      messageResource.query({receiver_id: $scope.msg_receiver_selected}, function(messageCollection){
-        $scope.tip.messages = messageCollection;
-
-        $scope.tip.messages.newMessage = function(content) {
-          var m = new messageResource({receiver_id: $scope.msg_receiver_selected});
-          m.content = content;
-          m.$save(function(newMessage) {
-            $scope.tip.messages.unshift(newMessage);
-          });
-        };
-
-        fn($scope.tip);
-      });
-    }
-  }, true);
-
 }]);
 
 TipOperationsCtrl = ['$scope', '$http', '$route', '$location', '$modalInstance', 'Tip', 'tip_id',
@@ -67,12 +49,12 @@ TipOperationsCtrl = ['$scope', '$http', '$route', '$location', '$modalInstance',
   $scope.ok = function (operation) {
      $modalInstance.close();
 
-     if (operation == 'postpone') {
+     if (operation === 'postpone') {
        $scope.tip.operation = operation;
        $scope.tip.$update(function() {
          $route.reload();
        });
-     } else if (operation == 'delete') {
+     } else if (operation === 'delete') {
        return $http({method: 'DELETE', url: '/rtip/' + tip_id, data:{}}).
              success(function(data, status, headers, config){ 
                $location.url('/receiver/tips');

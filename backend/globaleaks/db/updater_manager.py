@@ -2,31 +2,59 @@
 import os
 
 from globaleaks.settings import GLSetting
-from globaleaks.models import models as orm_classes_list
+from globaleaks import models
 
-def perform_version_update(starting_ver, ending_ver, start_path):
+from globaleaks.db.migrations.update_8_9 import Replacer89, Context_v_8, Receiver_v_8, Notification_v_8
+from globaleaks.db.migrations.update_9_10 import Replacer910, Node_v_9, Receiver_v_9, User_v_9
+from globaleaks.db.migrations.update_10_11 import Replacer1011, InternalTip_v_10, InternalFile_v_10
+from globaleaks.db.migrations.update_11_12 import Replacer1112, Node_v_11, Context_v_11
+from globaleaks.db.migrations.update_12_13 import Replacer1213, Node_v_12, Context_v_12
+from globaleaks.db.migrations.update_13_14 import Replacer1314, Node_v_13, Context_v_13
+from globaleaks.db.migrations.update_14_15 import Replacer1415, Node_v_14, User_v_14, Context_v_14, Receiver_v_14, \
+    InternalTip_v_14, Notification_v_14, Stats_v_14, Comment_v_14
+from globaleaks.db.migrations.update_15_16 import Replacer1516, Receiver_v_15, Notification_v_15
+from globaleaks.db.migrations.update_16_17 import Replacer1617, Node_v_16, Receiver_v_16, Notification_v_16, Stats_v_16
+from globaleaks.db.migrations.update_17_18 import Replacer1718, Node_v_17
+from globaleaks.db.migrations.update_18_19 import Replacer1819, Node_v_18
+from globaleaks.db.migrations.update_19_20 import Replacer1920, Node_v_19, Notification_v_19, Comment_v_19, Message_v_19, \
+    InternalTip_v_19, ReceiverTip_v_19, InternalFile_v_19, ReceiverFile_v_19, Receiver_v_19, \
+    Context_v_19
+from globaleaks.db.migrations.update_20_21 import Replacer2021, Node_v_20, Notification_v_20, Receiver_v_20, User_v_20, Context_v_20, Step_v_20, Field_v_20, FieldOption_v_20
+
+
+table_history = {
+    'Node': [Node_v_9, None, Node_v_11, None, Node_v_12, Node_v_13, Node_v_14, Node_v_16, None, Node_v_17, Node_v_18, Node_v_19, Node_v_20, models.Node],
+    'User': [User_v_9, None, User_v_14, None, None, None, None, User_v_20, None, None, None, None, None, models.User],
+    'Context': [Context_v_8, Context_v_11, None, None, Context_v_12, Context_v_13, Context_v_14, Context_v_19, None, None, None, None, Context_v_20, models.Context],
+    'Receiver': [Receiver_v_8, Receiver_v_9, Receiver_v_14, None, None, None, None, Receiver_v_15, Receiver_v_16, Receiver_v_19, None, None, Receiver_v_20, models.Receiver],
+    'ReceiverFile': [ReceiverFile_v_19, None, None, None, None, None, None, None, None, None, None, None, models.ReceiverFile, None],
+    'Notification': [Notification_v_8, Notification_v_14, None, None, None, None, None, Notification_v_15, Notification_v_16, Notification_v_19, None, None, Notification_v_20, models.Notification],
+    'Comment': [Comment_v_14, None, None, None, None, None, None, Comment_v_19, None, None, None, None, models.Comment, None],
+    'InternalTip': [InternalTip_v_10, None, None, InternalTip_v_14, None, None, None, InternalTip_v_19, None, None, None, None, models.InternalTip, None],
+    'InternalFile': [InternalFile_v_10, None, None, InternalFile_v_19, None, None, None, None, None, None, None, None, models.InternalFile, None],
+    'WhistleblowerTip': [models.WhistleblowerTip, None, None, None, None, None, None, None, None, None, None, None, None, None],
+    'ReceiverTip': [ReceiverTip_v_19, None, None, None, None, None, None, None, None, None, None, None, models.ReceiverTip, None],
+    'ReceiverInternalTip': [models.ReceiverInternalTip, None, None, None, None, None, None, None, None, None, None, None, None, None],
+    'ReceiverContext': [models.ReceiverContext, None, None, None, None, None, None, None, None, None, None, None, None, None],
+    'Message': [Message_v_19, None, None, None, None, None, None, None, None, None, None, None, models.Message, None],
+    'Stats': [Stats_v_14, None, None, None, None, None, None, Stats_v_16, None, models.Stats, None, None, None, None],
+    'ApplicationData': [models.ApplicationData, None, None, None, None, None, None, None, None, None, None, None, None, None],
+    'Field': [Field_v_20, None, None, None, None, None, None, None, None, None, None, None, None, models.Field],
+    'FieldOption': [FieldOption_v_20, None, None, None, None, None, None, None, None, None, None, None, None, models.FieldOption],
+    'FieldField': [models.FieldField, None, None, None, None, None, None, None, None, None, None, None, None, None],
+    'Step': [Step_v_20, None, None, None, None, None, None, None, None, None, None, None, None, models.Step],
+    'StepField': [models.StepField, None, None, None, None, None, None, None, None, None, None, None, None, None],
+    'Anomalies': [models.Anomalies, None, None, None, None, None, None, None, None, None, None, None, None, None],
+    'EventLogs': [models.EventLogs, None, None, None, None, None, None, None, None, None, None, None, None, None]
+}
+
+
+def perform_version_update(starting_ver, ending_ver):
     """
     @param starting_ver:
     @param ending_ver:
-    @param start_path:
     @return:
     """
-    assert os.path.isfile(start_path)
-    assert starting_ver < ending_ver
-
-    from globaleaks.db.update_8_9 import Replacer89
-    from globaleaks.db.update_9_10 import Replacer910
-    from globaleaks.db.update_10_11 import Replacer1011
-    from globaleaks.db.update_11_12 import Replacer1112
-    from globaleaks.db.update_12_13 import Replacer1213
-    from globaleaks.db.update_13_14 import Replacer1314
-    from globaleaks.db.update_14_15 import Replacer1415
-    from globaleaks.db.update_15_16 import Replacer1516
-    from globaleaks.db.update_16_17 import Replacer1617
-    from globaleaks.db.update_17_18 import Replacer1718
-    from globaleaks.db.update_18_19 import Replacer1819
-    from globaleaks.db.update_19_20 import Replacer1920
-
     releases_supported = {
         "89": Replacer89,
         "910": Replacer910,
@@ -40,6 +68,7 @@ def perform_version_update(starting_ver, ending_ver, start_path):
         "1718": Replacer1718,
         "1819": Replacer1819,
         "1920": Replacer1920,
+        "2021": Replacer2021,
     }
     
     to_delete_on_fail = []
@@ -51,7 +80,6 @@ def perform_version_update(starting_ver, ending_ver, start_path):
         quit()
 
     try:
-
         while starting_ver < ending_ver:
 
             if not starting_ver:
@@ -74,7 +102,7 @@ def perform_version_update(starting_ver, ending_ver, start_path):
 
             try:
                 # Here is instanced the migration class
-                updater_code = releases_supported[update_key](old_db_file, new_db_file, starting_ver)
+                updater_code = releases_supported[update_key](table_history, old_db_file, new_db_file, starting_ver)
             except Exception as excep:
                 print "__init__ updater_code: %s " % excep.message
                 raise excep
@@ -85,9 +113,8 @@ def perform_version_update(starting_ver, ending_ver, start_path):
                 print "initialize of updater class: %s " % excep.message
                 raise excep
 
-            for model_name in orm_classes_list:
-
-                migrate_function = 'migrate_%s' % model_name.__name__
+            for model in models.models_list:
+                migrate_function = 'migrate_%s' % model.__name__
                 function_pointer = getattr(updater_code, migrate_function)
 
                 try:

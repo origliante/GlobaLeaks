@@ -1,8 +1,4 @@
 module.exports = function(grunt) {
-  'use strict';
-  //
-  // Grunt configuration:
-  //
   grunt.initConfig({
     manifest:{
       dest: 'tmp/'
@@ -41,32 +37,58 @@ module.exports = function(grunt) {
     },
 
     clean: {
-      release: ['tmp']
+      build: ['tmp']
     },
 
-    copy: {
-      release: {
-          files: [{
-            dest: 'tmp/', cwd: 'app/', src: ['**'], expand: true
-          }]
+    connect: {
+      server: {
+        options: {
+          port: 9000,
+          base: 'tests/browserchecks'
+        }
       }
     },
 
-    // usemin handler should point to the file containing
-    // the usemin blocks to be parsed
+    copy: {
+      build: {
+          files: [{
+            dest: 'tmp/', cwd: 'app/', src: ['**'], expand: true
+          }]
+      },
+      unittests: {
+        files: [
+          {
+            expand: true,
+            flatten: true,
+            cwd: 'node_modules/',
+            src: ['mocha/mocha.css', 'mocha/mocha.js', 'chai/chai.js'],
+            dest: 'tests/browserchecks/lib/'
+          },
+          {
+            expand: true,
+            flatten: true,
+            cwd: './',
+            src: 'build/browserchecks.js',
+            dest: 'tests/browserchecks'
+          }
+        ]
+      }
+    },
+
     useminPrepare: {
-      html: ['tmp/index.html',
-             'tmp/globaleaks.html',
+      html: [
+        'tmp/index.html',
+        'tmp/globaleaks.html',
       ],
       options: {
         dest: 'tmp'
       }
     },
 
-    // update references in HTML/CSS
     usemin: {
-      html: ['tmp/views/**/*.html',
-             'tmp/index.html',
+      html: [
+        'tmp/views/**/*.html',
+        'tmp/index.html',
       ],
       options: {
         dirs: ['tmp']
@@ -76,54 +98,139 @@ module.exports = function(grunt) {
     cssmin: {
       combine: {
         files: {
-          'tmp/styles-rtl.css': [ 'tmp/components/bootstrap-rtl/dist/css/bootstrap-rtl.css',
-                                  'tmp/components/jquery-file-upload/css/jquery.fileupload.css',
-                                  'tmp/components/jquery-file-upload/css/jquery.fileupload-ui.css',
-                                  'tmp/styles/main.css',
-                                  'tmp/styles/admin.css',
-                                  'tmp/styles/home.css',
-                                  'tmp/styles/submission.css',
-                                  'tmp/styles/rtl.css']
+          'tmp/styles-rtl.css': [
+            'tmp/components/bootstrap/dist/css/bootstrap.css',
+            'tmp/components/bootstrap-rtl/dist/css/bootstrap-rtl.css',
+            'tmp/components/ng-sortable/dist/ng-sortable.css',
+            'tmp/styles/main.css',
+            'tmp/styles/admin.css',
+            'tmp/styles/home.css',
+            'tmp/styles/submission.css',
+            'tmp/styles/rtl.css'
+          ]
         }
       }
     },
 
-    // HTML minification
     html: {
       files: ['**/*.html']
+    },
+
+    mocha_phantomjs: {
+      all: ['tests/browserchecks/unittests.html'],
+      options: {
+        timeout: 1200
+      }
+    },
+
+    'saucelabs-mocha': {
+      all: {
+        options: {
+          username: process.env.SAUCE_USERNAME,
+          key: process.env.SAUCE_ACCESS_KEY,
+          urls: ['http://127.0.0.1:9000/unittests.html'],
+          build: process.env.TRAVIS_JOB_ID,
+          testname: 'GlobaLeaks-Loader',
+          /*
+             What follows is the list of browsers not supported by globaleaks
+             for which we tests at least that the browserchecks lib.
+          */
+          browsers: [
+            { browserName: "firefox", version: "3.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "3.5", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "3.6", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "4.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "5.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "6.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "7.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "8.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "14.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "15.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "16.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "17.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "18.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "19.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "20.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "21.0b1", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "27.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "28.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "29.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "30.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "31.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "32.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "33.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "34.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "35.0", platform: "Windows 8.1" },
+            { browserName: "firefox", version: "36.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "26.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "27.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "28.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "29.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "30.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "31.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "32.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "33.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "34.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "35.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "36.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "37.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "38.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "39.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "40.0", platform: "Windows 8.1" },
+            { browserName: "chrome", version: "41.0", platform: "Windows 8.1" },
+            { browserName: "opera", version: "11.64", platform: "Windows 7" },
+            { browserName: "opera", version: "12.12", platform: "Windows 7" },
+            { browserName: "safari", platform: "OS X 10.6" },
+            { browserName: "safari", platform: "OS X 10.7" },
+            { browserName: "safari", platform: "OS X 10.8" },
+            { browserName: "safari", platform: "OS X 10.9" },
+            { browserName: "iphone", deviceName: "iPhone Simulator", "device-orientation": "portrait" },
+            { browserName: "iphone", deviceName: "iPad Simulator", "device-orientation": "portrait" },
+            { browserName: "android", version: "4.0", deviceName: "Android Emulator", platform: "Linux" },
+            { browserName: "android", version: "4.1", deviceName: "Android Emulator", platform: "Linux" },
+            { browserName: "android", version: "4.2", deviceName: "Android Emulator", platform: "Linux" },
+            { browserName: "android", version: "4.3", deviceName: "Android Emulator", platform: "Linux" },
+            { browserName: "android", version: "4.4", deviceName: "Android Emulator", platform: "Linux" },
+            { browserName: "internet explorer", version: "7", platform: "Windows XP" },
+            { browserName: "internet explorer", version: "8", platform: "Windows 7" },
+            { browserName: "internet explorer", version: "9", platform: "Windows 7" },
+            { browserName: "internet explorer", version: "10", platform: "Windows 8" }
+          ],
+          public: "public",
+          maxRetries: 3,
+          pollInterval: 10000,
+          statusCheckAttempts: 5000,
+          throttled: 3,
+          sauceConfig: {'recordVideo': false}
+        }
+      },
     },
 
     // Put all angular.js templates into a single file
     ngtemplates:  {
       GLClient: {
-            cwd: 'app',
-            options: {base: 'app/'},
-            src: ['views/**/*.html'],
-            dest: 'tmp/scripts/templates.js'
-          }
-    },
-
-    lineremover: {
-      customExclude: {
-        files: {
-          'tmp/index.html': 'tmp/index.html'
-        },
-        options: {
-          exclusionPattern: /<link rel="stylesheet" href="(styles|styles-rtl)\.css"\/>/g
-        }
-      },
+        cwd: 'app',
+        options: {base: 'app/'},
+        src: ['views/**/*.html'],
+        dest: 'tmp/scripts/templates.js'
+      }
     },
 
     protractor: {
       options: {
-        configFile: "tests/glclient/protractor.config.js", // Default config file
-        keepAlive: true, // If false, the grunt process stops when the test fails.
-        noColor: false, // If true, protractor will not use colors in its output.
-        args: {
-          browser: 'firefox'
-        }
+        keepAlive: true,
+        noColor: false,
+        singleRun: true
       },
-      dummy_target: { /* Grunt requires at least one target */ }
+      test: {
+        configFile: "tests/client/protractor.config.js"
+      },
+      saucelabs: {
+        configFile: "tests/client/protractor-sauce.config.js",
+        options: {
+          build: process.env.TRAVIS_JOB_ID
+        }
+      }
     },
 
     'string-replace': {
@@ -133,6 +240,10 @@ module.exports = function(grunt) {
         },
         options: {
           replacements: [
+            {
+              pattern: '<link rel="stylesheet" href="styles.css">',
+              replacement: '<link rel="stylesheet" data-ng-href="{{ build_stylesheet }}" href="styles.css">'
+            },
             {
               pattern: '<script src="scripts.js"></script>',
               replacement: ''
@@ -171,15 +282,22 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-confirm');
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-contrib-concat');
+  grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-line-remover');
   grunt.loadNpmTasks('grunt-manifest');
+  grunt.loadNpmTasks('grunt-mocha-phantomjs');
+  grunt.loadNpmTasks('grunt-mocha-test');
   grunt.loadNpmTasks('grunt-protractor-runner');
+  grunt.loadNpmTasks('grunt-saucelabs');
   grunt.loadNpmTasks('grunt-string-replace');
   grunt.loadNpmTasks('grunt-usemin');
+  grunt.loadNpmTasks('grunt-contrib-copy');
+  grunt.loadNpmTasks('grunt-contrib-connect');
+  grunt.loadNpmTasks('grunt-saucelabs');
 
   var path = require('path'),
     superagent = require('superagent'),
@@ -215,7 +333,7 @@ module.exports = function(grunt) {
 
     grunt.file.mkdir('build/');
 
-    var files = ['globaleaks.html', 'index.html', 'loader.js', 'styles.css', 'styles-rtl.css', 'scripts.js']
+    var files = ['globaleaks.html', 'index.html', 'browserchecks.js', 'styles.css', 'styles-rtl.css', 'scripts.js']
     for (var x in files) {
         grunt.file.copy('tmp/' + files[x], 'build/' + files[x])
     }
@@ -669,9 +787,9 @@ module.exports = function(grunt) {
 
   // Run this to build your app. You should have run updateTranslations before you do so, if you have changed something in your translations.
   grunt.registerTask('build',
-    ['clean', 'copy', 'ngtemplates', 'useminPrepare', 'concat', 'cssmin', 'usemin', 'uglify', 'string-replace', 'lineremover', 'manifest', 'cleanupWorkingDirectory']);
+    ['clean:build', 'copy:build', 'ngtemplates', 'useminPrepare', 'concat', 'cssmin', 'usemin', 'uglify', 'string-replace', 'manifest', 'cleanupWorkingDirectory']);
 
-  grunt.registerTask('unittest',
-    ['protractor']);
+  grunt.registerTask('test-browserchecks', ['copy:unittests', 'mocha_phantomjs']);
+  grunt.registerTask('test-browserchecks-saucelabs', ['copy:unittests', 'connect', 'saucelabs-mocha']);
 
 };

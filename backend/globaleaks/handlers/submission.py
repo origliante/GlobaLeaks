@@ -7,12 +7,12 @@
 #   by an HTTP client in /submission URI
 
 import copy
-from globaleaks.third_party.rstr import rstr
 
 from twisted.internet.defer import inlineCallbacks
 from globaleaks.settings import transact, GLSetting
-from globaleaks.models import Context, InternalTip, Receiver, WhistleblowerTip, \
-    Node, InternalFile
+from globaleaks.models import Node, Context, Receiver, \
+    InternalTip, ReceiverTip, WhistleblowerTip, \
+    InternalFile
 from globaleaks import security
 from globaleaks.handlers.base import BaseHandler
 from globaleaks.handlers.admin import db_get_context_steps
@@ -20,6 +20,7 @@ from globaleaks.handlers.authentication import transport_security_check, unauthe
 from globaleaks.utils.token import Token, TokenList
 from globaleaks.rest import requests
 from globaleaks.utils.utility import log, utc_future_date, datetime_now, datetime_to_ISO8601
+from globaleaks.third_party import rstr
 from globaleaks.rest import errors
 from globaleaks.anomaly import Alarm
 
@@ -28,44 +29,57 @@ def wb_serialize_internaltip(internaltip):
     response = {
         'id': internaltip.id,
         'context_id': internaltip.context_id,
-<<<<<<< HEAD
         'creation_date': datetime_to_ISO8601(internaltip.creation_date),
         'expiration_date': datetime_to_ISO8601(internaltip.expiration_date),
         'wb_steps': internaltip.wb_steps,
         'files': [f.id for f in internaltip.internalfiles],
-        'receivers': [r.id for r in internaltip.receivers],
-        'wb_e2e_public': internaltip.wb_e2e_public
-=======
-        'creation_date' : datetime_to_ISO8601(internaltip.creation_date),
-        'expiration_date' : datetime_to_ISO8601(internaltip.expiration_date),
-        'wb_steps' : internaltip.wb_steps,
-        'download_limit' : internaltip.download_limit,
-        'access_limit' : internaltip.access_limit,
-        'mark' : internaltip.mark,
-        'files' : [f.id for f in internaltip.internalfiles],
-        'receivers' : [r.id for r in internaltip.receivers],
-        'pgp_glkey_pub': internaltip.pgp_glkey_pub,
-        'pgp_glkey_priv': internaltip.pgp_glkey_priv
->>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
+        'receivers': [r.id for r in internaltip.receivers]
     }
 
     return response
 
+def db_create_receivertip(store, receiver, internaltip):
+    """
+    Create ReceiverTip for the required tier of Receiver.
+    """
+    log.debug('Creating ReceiverTip for receiver: %s' % receiver.id)
 
-def db_create_whistleblower_tip(store, wb_signature, internaltip_id):
+    receivertip = ReceiverTip()
+    receivertip.internaltip_id = internaltip.id
+    receivertip.receiver_id = receiver.id
+
+    store.add(receivertip)
+
+    return receivertip.id
+
+def db_create_whistleblower_tip(store, internaltip):
+    """
+    The plaintext receipt is returned only now, and then is
+    stored hashed in the WBtip table
+    """
     wbtip = WhistleblowerTip()
+
+    node = store.find(Node).one()
+
+    receipt = unicode(rstr.xeger(GLSetting.receipt_regexp))
+
+    wbtip.receipt_hash = security.hash_password(receipt, node.receipt_salt)
     wbtip.access_counter = 0
-    wbtip.wb_signature = wb_signature
-    wbtip.internaltip_id = internaltip_id
+    wbtip.internaltip_id = internaltip.id
+
     store.add(wbtip)
 
-def hybrid_get_receipt_hash(store):
-    """
-    """
-    node = store.find(Node).one()
-    return_value_receipt = unicode( rstr.xeger(node.receipt_regexp) )
-    receipt_hash = security.hash_password(return_value_receipt, node.receipt_salt)
-    return receipt_hash, return_value_receipt
+    created_rtips = []
+
+    for receiver in internaltip.receivers:
+        rtip_id = db_create_receivertip(store, receiver, internaltip)
+
+    internaltip.new = False
+
+    if len(created_rtips):
+        log.debug("The finalized submissions had created %d ReceiverTip(s)" % len(created_rtips))
+
+    return receipt
 
 
 @transact
@@ -172,24 +186,7 @@ def db_create_submission(store, token, request, language):
     submission.context_id = context.id
     submission.creation_date = datetime_now()
 
-    # the fingerprint / signature is associated to WhistleblowerTip
-    submission.wb_e2e_public = request['wb_e2e_public']
-
-    # This value is the copy of the node level setting, that can change in the time.
-    submission.is_e2e_encrypted = GLSetting.memory_copy.submission_data_e2e
-
-    if GLSetting.memory_copy.submission_data_e2e:
-        log.debug("End2End enabled node level, wb_steps len #%d (has to be 1) first 20bytes: %s" %(
-            len(request['wb_steps']),
-            request['wb_steps'][0][:20]))
-    else:
-        log.debug("End2End DIS-abled node level, wb_steps len #%d" % (len(request['wb_steps'])))
-
-    try:
-        store.add(submission)
-    except Exception as excep:
-        log.err("Storm/SQL Error: %s (create_submission)" % excep)
-        raise errors.InternalServerError("Unable to commit on DB")
+    store.add(submission)
 
     try:
         for filedesc in token.uploaded_files:
@@ -212,16 +209,8 @@ def db_create_submission(store, token, request, language):
 
     try:
         wb_steps = request['wb_steps']
-<<<<<<< HEAD
         steps = db_get_context_steps(store, context.id, language)
-=======
-
-        #TODO: e2e - move verify_steps in the receiver frontend js code 
-        if finalize:
-            steps = db_get_context_steps(store, context.id, language)
-            #verify_steps(steps, wb_steps)
-
->>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
+        verify_steps(steps, wb_steps)
         submission.wb_steps = wb_steps
     except Exception as excep:
         log.err("Submission create: fields validation fail: %s" % excep)
@@ -233,88 +222,14 @@ def db_create_submission(store, token, request, language):
         log.err("Submission create: receivers import fail: %s" % excep)
         raise excep
 
-    submission_dict = wb_serialize_internaltip(submission)
-    return submission_dict
-
-<<<<<<< HEAD
-=======
-@transact
-def create_submission(*args):
-    return db_create_submission(*args)
-
-def db_update_submission(store, submission_id, request, finalize, language):
-    context = store.find(Context, Context.id == unicode(request['context_id'])).one()
-    if not context:
-        log.err("Context requested: [%s] not found!" % request['context_id'])
-        raise errors.ContextIdNotFound
-
-    submission = store.find(InternalTip, InternalTip.id == unicode(submission_id)).one()
-    if not submission:
-        log.err("Invalid Submission requested %s in PUT" % submission_id)
-        raise errors.SubmissionIdNotFound
-
-    # this may happen if a submission try to update a context
-    if submission.context_id != context.id:
-        log.err("Can't be changed context in a submission update")
-        raise errors.ContextIdNotFound()
-
-    if submission.mark != u'submission':
-        log.err("Submission %s do not permit update (status %s)" % (submission_id, submission.mark))
-        raise errors.SubmissionConcluded
-
-    try:
-        import_files(store, submission, request['files'])
-    except Exception as excep:
-        log.err("Submission update: files import fail: %s" % excep)
-        log.exception(excep)
-        raise excep
-
-    try:
-        wb_steps = request['wb_steps']
-        if finalize:
-            steps = db_get_context_steps(store, context.id, language)
-            #TODO: move to client code
-            #verify_steps(steps, wb_steps)
-
-        submission.wb_steps = wb_steps
-    except Exception as excep:
-        log.err("Submission update: fields validation fail: %s" % excep)
-        log.exception(excep)
-        raise excep
-
-    try:
-        import_receivers(store, submission, request['receivers'], required=finalize)
-    except Exception as excep:
-        log.err("Submission update: receiver import fail: %s" % excep)
-        log.exception(excep)
-        raise excep
-
-    if finalize:
-        submission.mark = u'finalize'  # Finalized
-
-        #TODO: validation
-        submission.pgp_glkey_pub = request['pgp_glkey_pub']
-        submission.pgp_glkey_priv = request['pgp_glkey_priv']
-    else:
-        submission.mark = u'submission' # Submission
+    receipt = db_create_whistleblower_tip(store, submission)
 
     submission_dict = wb_serialize_internaltip(submission)
+
+    submission_dict.update({'receipt': receipt})
+
     return submission_dict
 
-@transact
-def update_submission(*args):
-    return db_update_submission(*args)
-
-@transact_ro
-def get_submission(store, submission_id):
-    submission = store.find(InternalTip, InternalTip.id == unicode(submission_id)).one()
-
-    if not submission:
-        log.err("Invalid Submission requested %s in GET" % submission_id)
-        raise errors.SubmissionIdNotFound
-
-    return wb_serialize_internaltip(submission)
->>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
 @transact
 def create_submission(store, token, request, language):
@@ -332,24 +247,21 @@ class SubmissionCreate(BaseHandler):
     @unauthenticated
     def post(self):
         """
-        Request: SubmissionDesc
-        Response: SubmissionDesc
+        Request: None
+        Response: SubmissionDesc (Token)
         Errors: ContextIdNotFound, InvalidInputFormat, SubmissionFailFields
 
         This creates an empty submission for the requested context,
         and returns submissionStatus with empty fields and a Submission Unique String,
         This is the unique token used during the submission procedure.
-        header session_id is used as authentication secret for the next interaction.
-        expire after the time set by Admin (Context dependent setting)
 
-        --- has to became:
-        Request: empty
-        Response: SubmissionDesc + Token
-        Errors: None
-
-        This create a Token, require to complete the submission later
+        This create a Token, require to complete the submission later.
         """
-        request = self.validate_message(self.request.body, requests.SubmissionDesc)
+
+        if not GLSetting.memory_copy.accept_submissions:
+            raise errors.SubmissionDisabled
+
+        request = self.validate_message(self.request.body, requests.TokenDesc)
 
         token = Token('submission', request['context_id'])
         token.set_difficulty(Alarm().get_token_difficulty())
@@ -380,34 +292,17 @@ class SubmissionInstance(BaseHandler):
 
         PUT finalize the submission
         """
-
-        @transact
-        def put_transact(store, token, request):
-            status = db_create_submission(store, token, request, self.request.language)
-
-            if len(request['wb_signature']):
-                log.debug("End2End encryption submission: handshake fingerprint (TODO sign)")
-            else:
-                log.debug("End2End disabled: receipt is going to be generated")
-                hash, display = hybrid_get_receipt_hash(store)
-                print "DEBUG **", hash, display
-                status['receipt'] = display
-                request['wb_signature'] = hash
-
-            db_create_whistleblower_tip(store, request['wb_signature'], status['id'])
-            return status
-
         request = self.validate_message(self.request.body, requests.SubmissionDesc)
 
         # the .get method raise an exception if the token is invalid
         token = TokenList.get(token_id)
 
         if not token.context_associated == request['context_id']:
-            raise errors.InvalidInputFormat("Token context unaligned with REST url")
+            raise errors.InvalidInputFormat("Token context does not match the one specified in submission payload")
 
         token.validate(request)
 
-        status = yield put_transact(token, request)
+        status = yield create_submission(token, request, self.request.language)
 
         TokenList.delete(token_id)
 

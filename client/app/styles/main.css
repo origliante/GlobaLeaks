@@ -1,3 +1,7 @@
+* {
+  word-wrap: break-word;
+}
+
 html {
   position: relative;
   min-height: 100%;
@@ -5,10 +9,9 @@ html {
 
 body {
   background-color: #FFF;
-}
 
-* {
-  word-wrap: break-word;
+  /* Margin bottom by footer height */
+  margin-bottom: 60px;
 }
 
 h1 {
@@ -32,7 +35,7 @@ table {
   word-wrap: break-word;
 }
 
-#HeaderBox, #HeaderBoxHomepage {
+#HeaderBox {
   overflow: hidden;
   color: #FFF;
   background: #428bca;
@@ -40,14 +43,18 @@ table {
   padding: 30px 15px 30px 15px;
 }
 
-#HeaderBox:after, #HeaderBox:after, #HeaderBoxHompage:after, #HeaderBoxHomepage:after {
+#HeaderBox:after, #HeaderBox:after {
   clear: both;
   content: "";
   display: block;
 }
 
-#HeaderBox p, #HeaderBoxHomepage p {
-  margin-bottom: 20px;
+#HeaderBoxContentLeft {
+  float: left;
+}
+
+#HeaderBoxContentRight {
+  float: right;
 }
 
 #ContentBox {
@@ -65,7 +72,13 @@ table {
 }
 
 #FooterBox {
+  position: absolute;
+  bottom: 0;
+
+  /* Set the fixed height of the footer here */
   height: 60px;
+
+  background-color: #f5f5f5;
   width: 100%;
   margin-top: 20px;
   padding-top: 20px;
@@ -77,24 +90,35 @@ table {
   font-size: 20px;
 }
 
-#LogoBox, #TitleBox, #UserBox, #LogoBoxHomepage, #TitleBoxHomepage, #UserBoxHomepage {
+#LogoBox, #TitleBox, #UserBox {
   position: relative;
   margin-left: 20px;
   margin-right: 20px;
   z-index: 10;
 }
 
-#LogoBox, #LogoBoxHomepage {
+#LogoBox {
   text-align: center;
+  float: left;
 }
 
-#PageTitle, #PageTitleHomepage {
-  font-size: 36px;
+#TitleBox {
+  float: left;
+}
+
+#PageTitle {
+  font-size: 32px;
+  font-weight: bold;
   white-space: pre-wrap;
 }
 
+#PageTitleWithSubtitle {
+  font-size: 20px;
+}
+
 #PageSubtitle {
-  font-size: 24px;
+  font-size: 28px;
+  font-weight: bold;
 }
 
 #LanguagePickerBox {
@@ -109,22 +133,14 @@ table {
   border-radius: 15px;
 }
 
-#LogoBox, #LogoBoxHomepage {
+#LogoBox {
   width: 300px;
 }
 
-#LogoBox img, #LogoBoxHomepage img {
+#LogoBox img {
   margin: 0 auto;
   width: 200px;
   height: auto;
-}
-
-#TitleBox, #TitleBoxHomepage {
-  max-width: 60%;
-}
-
-#UserBox, #UserBoxHomepage {
-  max-width: 25%;
 }
 
 /** Submission details **/
@@ -193,7 +209,7 @@ table {
   display: block;
 }
 
-#titleboxwithtagline {
+#titleboxoneline {
   display: none;
 }
 
@@ -224,7 +240,7 @@ table {
   font-size: 16px;
 }
 
-.LoginErrorBox, .LoginErrorBoxHomepage {
+.LoginErrorBox {
   margin-top: 10px;
 }
 

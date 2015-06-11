@@ -1,9 +1,9 @@
-GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$routeParams', '$location',  '$filter', '$translate', '$modal', 'Authentication', 'Node', 'WBReceipt', 'GLCache',
-  function($scope, $rootScope, $http, $route, $routeParams, $location, $filter, $translate, $modal, Authentication, Node, WBReceipt, GLCache) {
-    $scope.started = true;
+GLClient.controller('MainCtrl', ['$q', '$scope', '$rootScope', '$http', '$route', '$routeParams', '$location',  '$filter', '$translate', '$modal', 'Authentication', 'Node', 'Contexts', 'Receivers', 'WhistleblowerTip', 'GLCache',
+  function($q, $scope, $rootScope, $http, $route, $routeParams, $location, $filter, $translate, $modal, Authentication, Node, Contexts, Receivers, WhistleblowerTip, GLCache) {
+    $scope.started = false;
     $scope.rtl = false;
-    $scope.logo = '/static/globaleaks_logo.png';
-    $scope.build_stylesheet = '/styles.css';
+    $scope.logo = 'static/globaleaks_logo.png';
+    $scope.build_stylesheet = 'styles.css';
 
     $rootScope.language = $location.search().lang;
 
@@ -17,10 +17,10 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
 
     $scope.reset_session = function() {
       $scope.session_id = undefined;
-      $scope.role = undefined
+      $scope.role = undefined;
       $scope.auth_landing_page = undefined;
       $scope.homepage = undefined;
-    }
+    };
 
     $scope.update = function (model, cb, errcb) {
       var success = {};
@@ -31,8 +31,8 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
         }
         $scope.successes.push(success);
       }).then(
-        function() { if (cb != undefined) cb(); },
-        function() { if (errcb != undefined) errcb(); }
+        function() { if (cb !== undefined) cb(); },
+        function() { if (errcb !== undefined) errcb(); }
       );
     };
 
@@ -41,16 +41,16 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
     };
 
     $scope.isWizard = function () {
-      return $location.path() == '/wizard';
+      return $location.path() === '/wizard';
     };
 
     $scope.isHomepage = function () {
-      return $location.path() == '/';
+      return $location.path() === '/';
     };
 
     $scope.isLoginPage = function () {
-      return ($location.path() == '/login' ||
-              $location.path() == '/admin');
+      return ($location.path() === '/login' ||
+              $location.path() === '/admin');
     };
 
     $scope.showLoginForm = function () {
@@ -59,7 +59,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
     };
 
     $scope.hasSubtitle = function () {
-      return $scope.header_subtitle != '';
+      return $scope.header_subtitle !== '';
     };
 
     $scope.open_intro = function () {
@@ -79,38 +79,40 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
     };
 
     $scope.set_title = function () {
-      if ($location.path() == '/') {
-        $scope.ht = $scope.node.header_title_homepage;
-      } else if ($location.path() == '/submission') {
-        $scope.ht = $scope.node.header_title_submissionpage;
-      } else if ($location.path() == '/receipt') {
-        $scope.ht = $scope.node.header_title_receiptpage;
-      } else {
-        $scope.ht = $filter('translate')($scope.header_title);
+      if ($rootScope.node) {
+        if ($location.path() === '/') {
+          $scope.ht = $rootScope.node.header_title_homepage;
+        } else if ($location.path() === '/submission') {
+          $scope.ht = $rootScope.node.header_title_submissionpage;
+        } else if ($location.path() === '/receipt') {
+          $scope.ht = $rootScope.node.header_title_receiptpage;
+        } else {
+          $scope.ht = $filter('translate')($scope.header_title);
+        }
       }
-    }
+    };
 
     $scope.route_check = function () {
-      if ($scope.node) {
+      if ($rootScope.node) {
 
-        if ($scope.node.wizard_done === false) {
+        if ($rootScope.node.wizard_done === false) {
           $location.path('/wizard');
         }
 
-        if (($location.path() == '/') && ($scope.node.landing_page == 'submissionpage')) {
+        if (($location.path() === '/') && ($rootScope.node.landing_page === 'submissionpage')) {
           $location.path('/submission');
         }
 
-        if ($location.path() == '/submission' &&
+        if ($location.path() === '/submission' &&
             $scope.anonymous === false &&
-            $scope.node.tor2web_submission === false) {
+            $rootScope.node.tor2web_submission === false) {
           $location.path("/");
         }
 
         /* Feature implemented for amnesty and currently disabled */
         //$scope.open_intro();
       }
-    }
+    };
 
     $scope.show_file_preview = function(content_type) {
       var content_types = [
@@ -125,11 +127,11 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
 
     var init = function () {
 
-      $scope.logo = '/static/globaleaks_logo.png?' + $scope.randomFluff();
-      $scope.build_stylesheet = "/styles.css?" + $scope.randomFluff();
+      $scope.logo = 'static/globaleaks_logo.png?' + $scope.randomFluff();
+      $scope.build_stylesheet = "styles.css?" + $scope.randomFluff();
 
       Node.get(function(node, getResponseHeaders) {
-        $scope.node = node;
+        $rootScope.node = node;
         // Tor detection and enforcing of usage of HS if users are using Tor
         if (window.location.hostname.match(/^[a-z0-9]{16}\.onion$/)) {
           // A better check on this situation would be
@@ -140,11 +142,11 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
              var headers = getResponseHeaders();
              if (headers['x-check-tor'] !== undefined && headers['x-check-tor'] === 'true') {
                $rootScope.anonymous = true;
-               if ($scope.node.hidden_service && !iframeCheck()) {
+               if ($rootScope.node.hidden_service && !iframeCheck()) {
                  // the check on the iframe is in order to avoid redirects
                  // when the application is included inside iframes in order to not
                  // mix HTTPS resources with HTTP resources.
-                 window.location.href = $scope.node.hidden_service + '/#' + $location.url();
+                 window.location.href = $rootScope.node.hidden_service + '/#' + $location.url();
                }
              } else {
                $rootScope.anonymous = false;
@@ -160,10 +162,10 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
         $scope.languages_enabled = {};
         $scope.languages_enabled_selector = [];
         angular.forEach(node.languages_supported, function (lang) {
-          var code = lang['code'];
-          var name = lang['name'];
+          var code = lang.code;
+          var name = lang.name;
           $scope.languages_supported[code] = name;
-          if (node.languages_enabled.indexOf(code) != -1) {
+          if (node.languages_enabled.indexOf(code) !== -1) {
             $scope.languages_enabled[code] = name;
             $scope.languages_enabled_selector.push({"name": name, "code": code});
           }
@@ -176,7 +178,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
         $scope.set_title();
 
         var set_language = function(language) {
-          if (language == undefined || $scope.node.languages_enabled.indexOf(language) == -1) {
+          if (language == undefined || $rootScope.node.languages_enabled.indexOf(language) == -1) {
             language = node.default_language;
             $rootScope.default_language = node.default_language;
           }
@@ -185,17 +187,28 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
 
           if (["ar", "he", "ur"].indexOf(language) !== -1) {
             $scope.rtl = true;
-            $scope.build_stylesheet = "/styles-rtl.css";
+            $scope.build_stylesheet = "styles-rtl.css";
           } else {
             $scope.rtl = false;
-            $scope.build_stylesheet = "/styles.css";
+            $scope.build_stylesheet = "styles.css";
           }
 
           $translate.use($rootScope.language);
-
-        }
+        };
 
         set_language($rootScope.language);
+
+        var q1 = Contexts.query(function (contexts) {
+          $rootScope.contexts = contexts;
+        });
+
+        var q2 = Receivers.query(function (receivers) {
+          $rootScope.receivers = receivers;
+        });
+
+        $q.all([q1.$promise, q2.$promise]).then(function() {
+          $scope.started = true;
+        });
 
         $rootScope.$watch('language', function (newVal, oldVal) {
           if (newVal && newVal !== oldVal) {
@@ -209,7 +222,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
 
     $scope.view_tip = function(keycode) {
       keycode = keycode.replace(/\D/g,'');
-      WBReceipt(keycode, function() {
+      WhistleblowerTip(keycode, function() {
         $location.path('/status');
       });
     };
@@ -218,10 +231,14 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
       GLCache.removeAll();
       init();
       $route.reload();
-    }
+    };
 
     $scope.$on( "$routeChangeStart", function(event, next, current) {
       $scope.route_check();
+    });
+
+    $scope.$on('$routeChangeSuccess', function() {
+      $scope.set_title();
     });
 
     $scope.$on("REFRESH", function() {
@@ -231,7 +248,7 @@ GLClient.controller('MainCtrl', ['$scope', '$rootScope', '$http', '$route', '$ro
     $scope.$watch(function (scope) {
       return Authentication.id;
     }, function (newVal, oldVal) {
-      if (newVal != undefined) {
+      if (newVal !== undefined) {
         $scope.session_id = Authentication.id;
         $scope.role = Authentication.role;
         $scope.auth_landing_page = Authentication.auth_landing_page;
@@ -309,3 +326,15 @@ GLClient.controller('IntroCtrl', ['$scope', '$rootScope', '$modalInstance', func
   });
 
 }]);
+
+ConfirmableDialogCtrl = ['$scope', '$modalInstance', 'object', function($scope, $modalInstance, object) {
+  $scope.object = object;
+
+  $scope.ok = function () {
+    $modalInstance.close($scope.object);
+  };
+
+  $scope.cancel = function () {
+    $modalInstance.dismiss('cancel');
+  };
+}];

@@ -3,6 +3,14 @@
   text-align: right;
 }
 
+#HeaderBoxContentLeft {
+  float: right;
+}
+
+#HeaderBoxContentRight {
+  float: left;
+}
+
 .LoginErrorBox {
   text-align: right;
 }
@@ -27,4 +35,10 @@
 
 .pull-right {
   float: left !important;
+}
+
+/* Overrides to submission.css */
+#StepNavBar, .SubmissionNavButton {
+  margin-left: 10px;
+  margin-right: 0px;
 }

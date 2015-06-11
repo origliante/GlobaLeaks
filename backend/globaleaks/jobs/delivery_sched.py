@@ -9,7 +9,6 @@
 #
 # Call also the FileProcess working point, in order to verify which
 # kind of file has been submitted.
-import os
 import sys
 
 import os
@@ -18,7 +17,7 @@ from globaleaks.jobs.base import GLJob
 from globaleaks.models import InternalFile, InternalTip, ReceiverTip, \
                               ReceiverFile
 from globaleaks.settings import transact, transact_ro, GLSetting
-from globaleaks.utils.utility import log, datetime_to_ISO8601
+from globaleaks.utils.utility import log
 from globaleaks.security import GLBPGP, GLSecureFile
 from globaleaks.handlers.admin import admin_serialize_receiver
 from globaleaks.third_party.rstr import xeger
@@ -29,11 +28,11 @@ __all__ = ['DeliverySchedule']
 def serialize_internalfile(ifile):
     ifile_dict = {
         'id': ifile.id,
-        'internaltip_id': ifile.internaltip_id,
-        'name': ifile.name,
-        'file_path': ifile.file_path,
-        'content_type': ifile.content_type,
-        'size': ifile.size,
+        'internaltip_id' : ifile.internaltip_id,
+        'name' : ifile.name,
+        'file_path' : ifile.file_path,
+        'content_type' : ifile.content_type,
+        'size' : ifile.size,
     }
 
     return ifile_dict
@@ -55,16 +54,16 @@ def get_files_by_itip(store, itip_id):
 
 def serialize_receiverfile(rfile):
     rfile_dict = {
-        'id': rfile.id,
-        'internaltip_id': rfile.internaltip_id,
-        'internalfile_id': rfile.internalfile_id,
-        'receiver_id': rfile.receiver_id,
-        'receivertip_id': rfile.receivertip_id,
-        'file_path': rfile.file_path,
-        'size': rfile.size,
-        'downloads': rfile.downloads,
-        'last_access': rfile.last_access,
-        'status': rfile.status,
+        'id' : rfile.id,
+        'internaltip_id' : rfile.internaltip_id,
+        'internalfile_id' : rfile.internalfile_id,
+        'receiver_id' : rfile.receiver_id,
+        'receivertip_id' : rfile.receivertip_id,
+        'file_path' : rfile.file_path,
+        'size' : rfile.size,
+        'downloads' : rfile.downloads,
+        'last_access' : rfile.last_access,
+        'status' : rfile.status,
     }
 
     return rfile_dict
@@ -102,11 +101,10 @@ def receiverfile_planning(store):
             receiver_desc = admin_serialize_receiver(receiver, GLSetting.memory_copy.language)
 
             map_info = {
-                'receiver': receiver_desc,
-                'path': filex.file_path,
-                'size': filex.size,
-                'status': u'reference',
-                'is_e2e_encrypted': filex.is_e2e_encrypted
+                'receiver' : receiver_desc,
+                'path' : filex.file_path,
+                'size' : filex.size,
+                'status' : u'reference'
             }
 
             # AS KEY, file path is used to keep track of the original
@@ -136,12 +134,7 @@ def fsops_pgp_encrypt(fpath, recipient_pgp):
     gpoj = GLBPGP()
 
     try:
-<<<<<<< HEAD
         gpoj.load_key(recipient_pgp['pgp_key_public'])
-=======
-        pub_key = recipient_gpg['gpg_key_armor']
-        gpoj.load_key(pub_key)
->>>>>>> 03d2b2e94f2a61176fb07e127ef60b89944ea235
 
         filepath = os.path.join(GLSetting.submission_path, fpath)
 
@@ -190,45 +183,6 @@ def receiverfile_create(store, if_path, recv_path, status, recv_size, receiver_d
                 (if_path, receiver_desc['name'], excep.message))
 
 
-# called in a transact!
-def create_receivertip(store, receiver, internaltip):
-    """
-    Create ReceiverTip for the required tier of Receiver.
-    """
-    log.debug('Creating ReceiverTip for: %s (Tip of %s) E2E: %s' %
-              (receiver.name,
-               datetime_to_ISO8601(internaltip.creation_date),
-               "YES" if internaltip.is_e2e_encrypted else "NO" ))
-
-    receivertip = ReceiverTip()
-    receivertip.internaltip_id = internaltip.id
-    receivertip.receiver_id = receiver.id
-
-    store.add(receivertip)
-
-    return receivertip.id
-
-
-@transact
-def tip_creation(store):
-    """
-    look for all the new InternalTips and create ReceiverTips
-    """
-    created_rtips = []
-
-    new_itips = store.find(InternalTip, InternalTip.new == True)
-    for internaltip in new_itips:
-        for receiver in internaltip.receivers:
-            rtip_id = create_receivertip(store, receiver, internaltip)
-            created_rtips.append(rtip_id)
-
-        internaltip.new = False
-
-    if len(created_rtips):
-        log.debug("The finalized submissions had created %d ReceiverTip(s)" % len(created_rtips))
-
-    return created_rtips
-
 @transact
 def do_final_internalfile_update(store, file_path, new_path):
     try:
@@ -257,16 +211,11 @@ def encrypt_where_available(receivermap):
         [ { 'receiver' : receiver_desc, 'path' : file_path, 'size' : file_size }, .. ]
     @return: return True if plaintex version of file must be created.
     """
+
     retcode = True
 
     for rcounter, rfileinfo in enumerate(receivermap):
-
-        if rfileinfo['is_e2e_encrypted']:
-            log.debug("End2End encryption: disable PGP End2Site encryption")
-            rfileinfo['status'] = u'reference'
-            retcode = False
-        elif rfileinfo['receiver']['pgp_key_status'] == u'enabled':
-
+        if rfileinfo['receiver']['pgp_key_status'] == u'enabled':
             try:
                 new_path, new_size = fsops_pgp_encrypt(rfileinfo['path'], rfileinfo['receiver'])
 
@@ -302,15 +251,6 @@ class DeliverySchedule(GLJob):
         Goal of this function is to process/validate files, compute their checksums and
         apply the configured delivery method.
         """
-        try:
-            # ==> Submission && Escalation
-            info_created_tips = yield tip_creation()
-            if info_created_tips:
-                log.debug("Delivery job: created %d tips" % len(info_created_tips))
-        except Exception as excep:
-            log.err("Exception in asyncronous delivery job: %s" % excep )
-            sys.excepthook(*sys.exc_info())
-
         filemap = yield receiverfile_planning()
 
         if not filemap:
