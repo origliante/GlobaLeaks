@@ -4,8 +4,10 @@
     <title ng-bind="node.name">GlobaLeaks</title>
     <meta charset="utf-8">
     <meta name="description" content="">
-    <meta name="viewport" content="width=device-width,user-scalable=no">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
     <meta name="referrer" content="never">
+
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
 
     <!-- build:css styles.css -->
     <link rel="stylesheet" href="components/bootstrap/dist/css/bootstrap.css">
@@ -14,10 +16,8 @@
     <link rel="stylesheet" href="styles/admin.css">
     <link rel="stylesheet" href="styles/home.css">
     <link rel="stylesheet" href="styles/submission.css">
+    <link rel="stylesheet" href="styles/tip.css">
     <!-- endbuild -->
-
-    <!-- runtime loading of RTL / LTR version -->
-    <link rel="stylesheet" data-ng-href="{{ build_stylesheet }}" href="/styles.css">
 
     <style type="text/css">
       [ng\:cloak], [ng-cloak], [ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
@@ -78,10 +78,11 @@
     </div>
 
     <!-- this is resolved by angular-js only at the end of the startup (js loading) -->
-    <div data-ng-show="started" data-ng-include="'globaleaks.html'"></div>
+    <div data-ng-if="started" data-ng-include="'globaleaks.html'"></div>
 
-    <!-- build:js loader.js -->
+    <!-- build:js browserchecks.js -->
     <script src="components/bowser/bowser.js"></script>
+    <script src="scripts/browserchecks.js"></script>
     <!-- endbuild -->
 
     <script src="scripts/crypto/scrypt-async.min.js"></script>
@@ -140,7 +141,7 @@
        fileref.setAttribute("type", "text/javascript");
        fileref.setAttribute("src", filepath);
        if (typeof fileref != "undefined") {
-         document.getElementsByTagName("head")[0].appendChild(fileref)
+         document.getElementsByTagName("head")[0].appendChild(fileref);
        }
       }
 
@@ -159,11 +160,11 @@
       } 
 
       function start_globaleaks() {
-        if (bowser.msie && bowser.version <= 8 || crypto_not_supported()) {
+        if (isBrowserCompatible()) {
+          loadjsfile("scripts.js");
+        } else {
           var error = document.getElementById("error_unsupported_browser");
           error.setAttribute("style", "block");
-        } else {
-          loadjsfile("scripts.js");
         }
       }
 

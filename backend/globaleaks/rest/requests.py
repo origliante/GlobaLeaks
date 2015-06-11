@@ -40,8 +40,23 @@ AuthDesc = {
     'role': unicode
 }
 
+TokenDesc = {
+    'context_id': uuid_regexp,
+}
+
+WBStepElem = {
+    # Everything will change here with E2E,
+    # because these stuff will be encrypted
+    'id' : uuid_regexp,
+    'hint': unicode,
+    'description':unicode,
+    'label': unicode,
+    'children': list
+}
+
 SubmissionDesc = {
-    'wb_steps': list,
+    'context_id': uuid_regexp,
+    'wb_steps': [ WBStepElem ],
     'human_captcha_answer': int,
     'receivers': [uuid_regexp],
     'wb_e2e_public': unicode,
@@ -50,6 +65,7 @@ SubmissionDesc = {
 
 ReceiverReceiverDesc = {
     'name': unicode,
+    'description': unicode,
     'password': unicode,
     'old_password': unicode,
     'mail_address': email_regexp,
@@ -61,8 +77,7 @@ ReceiverReceiverDesc = {
     'pgp_key_info': unicode,
     'pgp_key_public': unicode,
     'pgp_key_status': unicode,
-    'pgp_e2e_public': unicode,
-    'pgp_e2e_private': unicode,
+    'e2e_key_public': unicode,
     "tip_notification": bool,
     "ping_notification": bool,
     "language": unicode,
@@ -113,6 +128,7 @@ AdminNodeDesc = {
     'exception_email': email_regexp,
     'ahmia': bool,
     'allow_unencrypted': bool,
+    'allow_iframes_inclusion': bool,
     'wizard_done': bool,
     'disable_privacy_badge': bool,
     'disable_security_awareness_badge': bool,
@@ -141,23 +157,14 @@ AdminNotificationDesc = {
     'password': unicode,
     'source_name': unicode,
     'source_email': email_regexp,
-    'admin_anomaly_template': unicode,
-    'encrypted_tip_template': unicode,
-    'encrypted_tip_mail_title': unicode,
-    'plaintext_tip_template': unicode,
-    'plaintext_tip_mail_title': unicode,
-    'encrypted_file_template': unicode,
-    'encrypted_file_mail_title': unicode,
-    'plaintext_file_template': unicode,
-    'plaintext_file_mail_title': unicode,
-    'encrypted_comment_template': unicode,
-    'encrypted_comment_mail_title': unicode,
-    'plaintext_comment_template': unicode,
-    'plaintext_comment_mail_title': unicode,
-    'encrypted_message_template': unicode,
-    'encrypted_message_mail_title': unicode,
-    'plaintext_message_template': unicode,
-    'plaintext_message_mail_title': unicode,
+    'tip_mail_template': unicode,
+    'tip_mail_title': unicode,
+    'file_mail_template': unicode,
+    'file_mail_title': unicode,
+    'comment_mail_template': unicode,
+    'comment_mail_title': unicode,
+    'message_mail_template': unicode,
+    'message_mail_title': unicode,
     'admin_pgp_alert_mail_template': unicode,
     'admin_pgp_alert_mail_title': unicode,
     'pgp_alert_mail_template': unicode,
@@ -165,9 +172,19 @@ AdminNotificationDesc = {
     'zip_description': unicode,
     'ping_mail_template': unicode,
     'ping_mail_title': unicode,
+    'receiver_threshold_reached_mail_template': unicode,
+    'receiver_threshold_reached_mail_title': unicode,
+    'notification_digest_mail_title': unicode,
+    'tip_expiration_template': unicode,
+    'tip_expiration_mail_title': unicode,
+    'admin_anomaly_mail_template': unicode,
+    'admin_anomaly_mail_title': unicode,
     'disable_admin_notification_emails': bool,
     'disable_receivers_notification_emails': bool,
-    'send_email_for_every_event': bool
+    'send_email_for_every_event': bool,
+    'notification_threshold_per_hour': int,
+    'notification_suspension_time': int,
+    'reset_templates': bool,
 }
 
 AdminContextDesc = {
@@ -196,10 +213,11 @@ AdminContextFieldTemplateCopyDesc = {
 }
 
 AdminReceiverDesc = {
-    'password': unicode,
-    'mail_address': email_regexp,
     'name': unicode,
     'description': unicode,
+    'password': unicode,
+    'mail_address': email_regexp,
+    'ping_mail_address': email_regexp,
     'contexts': [uuid_regexp],
     'can_delete_submission': bool,
     'can_postpone_expiration': bool,
@@ -212,8 +230,7 @@ AdminReceiverDesc = {
     'pgp_key_public': unicode,
     'pgp_key_status': unicode,
     'pgp_key_public': unicode,
-    'pgp_e2e_public': unicode,
-    'pgp_e2e_private': unicode,
+    'e2e_key_public': unicode,
     'presentation_order': int,
     "language": unicode,
     "timezone": int
@@ -330,14 +347,12 @@ ContextDesc = {
     'presentation_order': int,
     'description': unicode,
     'tip_timetolive': int,
-    'submission_introduction': unicode,
     'maximum_selectable_receivers': int,
     'show_small_cards': bool,
     'show_receivers': bool,
     'enable_private_messages': bool,
     'id': uuid_regexp,
     'receivers': [uuid_regexp],
-    'submission_disclaimer': unicode,
     'show_receivers_in_alphabetical_order': bool
 }
 

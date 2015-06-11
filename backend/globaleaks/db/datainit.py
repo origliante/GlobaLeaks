@@ -89,9 +89,12 @@ def init_db(store, result, node_dict, appdata_dict):
         'salt': admin_salt,
         'role': u'admin',
         'state': u'enabled',
+        'mail_address': u'',
         'language': u"en",
         'timezone': 0,
         'password_change_needed': False,
+        'e2e_key_public': '',
+        'e2e_key_private': ''
     }
 
     admin = models.User(admin_dict)
@@ -121,6 +124,9 @@ def db_update_memory_variables(store):
         GLSetting.memory_copy.tor2web_receiver = node.tor2web_receiver
         GLSetting.memory_copy.tor2web_unauth = node.tor2web_unauth
 
+        GLSetting.memory_copy.submission_minimum_delay = node.submission_minimum_delay
+        GLSetting.memory_copy.submission_maximum_ttl =  node.submission_maximum_ttl
+
         GLSetting.memory_copy.allow_unencrypted = node.allow_unencrypted
         GLSetting.memory_copy.allow_iframes_inclusion = node.allow_iframes_inclusion
 
@@ -136,10 +142,14 @@ def db_update_memory_variables(store):
         notif = store.find(models.Notification).one()
 
         GLSetting.memory_copy.notif_server = notif.server
-        GLSetting.memory_copy.notif_port = int(notif.port)
+        GLSetting.memory_copy.notif_port = notif.port
         GLSetting.memory_copy.notif_password = notif.password
         GLSetting.memory_copy.notif_username = notif.username
         GLSetting.memory_copy.notif_security = notif.security
+
+        GLSetting.memory_copy.tip_expiration_threshold = notif.tip_expiration_threshold
+        GLSetting.memory_copy.notification_threshold_per_hour = notif.notification_threshold_per_hour
+        GLSetting.memory_copy.notification_suspension_time = notif.notification_suspension_time
 
         if GLSetting.developer_name:
             GLSetting.memory_copy.notif_source_name = GLSetting.developer_name
@@ -214,7 +224,6 @@ def apply_cli_options(store):
         node = store.find(Node).one()
         for k, v, in accepted.iteritems():
             setattr(node, k, v)
-        store.commit()
 
     # return configured URL for the log/console output
     node = store.find(Node).one()

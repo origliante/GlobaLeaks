@@ -29,12 +29,10 @@ from storm.databases.sqlite import sqlite
 from cyclone.web import HTTPError
 from cyclone.util import ObjectDict as OD
 from globaleaks import __version__, DATABASE_VERSION, LANGUAGES_SUPPORTED_CODES
-
-
+from globaleaks.rest.errors import DatabaseIntegrityError
 
 # XXX. MONKEYPATCH TO SUPPORT STORM 0.19
 import storm.databases.sqlite
-
 
 class SQLite(storm.databases.sqlite.Database):
     connection_factory = storm.databases.sqlite.SQLiteConnection
@@ -145,8 +143,10 @@ class GLSettingsClass(object):
 
         self.default_password = 'globaleaks'
 
-        # session tracking, in the singleton classes
-        self.sessions = dict()
+        # some singleton classes: sessions and some event queues
+        self.sessions = {}
+        self.RecentEventQ = []
+        self.RecentAnomaliesQ = {}
 
         # statistical, referred to latest period
         # and resetted by session_management sched
@@ -200,9 +200,12 @@ class GLSettingsClass(object):
         self.defaults.maximum_filesize = 30  # expressed in megabytes
         self.defaults.maximum_requestsize = 4  # expressed in megabytes
         self.defaults.exception_email = u"globaleaks-stackexception@lists.globaleaks.org"
-        # Context dependent values:
+
+        self.defaults.submission_minimum_delay = 10
+        self.defaults.submission_maximum_ttl = 10800
+
+        # This value get copy in Context(s):
         self.defaults.tip_seconds_of_life = (3600 * 24) * 15
-        self.defaults.submission_seconds_of_life = (3600 * 24) * 3
 
         self.defaults.language = u'en'
         self.defaults.languages_enabled = LANGUAGES_SUPPORTED_CODES
@@ -217,6 +220,7 @@ class GLSettingsClass(object):
         self.defaults.notif_username = None
         self.defaults.notif_security = None
         self.defaults.notif_uses_tor = None
+        self.defaults.notif_hours_before_expiration = 72
 
         # this became false when, few MBs cause node to disable submissions
         self.defaults.accept_submissions = True
@@ -309,7 +313,7 @@ class GLSettingsClass(object):
     def eval_paths(self):
         self.config_file_path = '/etc/globaleaks'
 
-        self.pidfile_path = os.path.join(self.pid_path, 'globaleaks-' + str(self.bind_port) + '.pid')
+        self.pidfile_path = os.path.join(self.pid_path, 'globaleaks.pid')
         self.glfiles_path = os.path.abspath(os.path.join(self.working_path, 'files'))
         self.gldb_path = os.path.abspath(os.path.join(self.working_path, 'db'))
         self.log_path = os.path.abspath(os.path.join(self.working_path, 'log'))
@@ -541,7 +545,6 @@ class GLSettingsClass(object):
                 self.avoid_globaleaks_swap()
 
             print "\n"
-
 
     def validate_port(self, inquiry_port):
         if inquiry_port >= 65535 or inquiry_port < 0:
@@ -797,11 +800,14 @@ class transact(object):
             else:
                 result = function(self.store, *args, **kwargs)
 
-        except (exceptions.IntegrityError, exceptions.DisconnectionError):
+        except exceptions.DisconnectionError as e:
             transaction.abort()
             # we print the exception here because we do not propagate it
-            GLSetting.log_debug(traceback.format_exc())
+            GLSetting.log_debug(e)
             result = None
+        except exceptions.IntegrityError as e:
+            transaction.abort()
+            raise DatabaseIntegrityError(str(e))
         except HTTPError as excep:
             transaction.abort()
             raise excep

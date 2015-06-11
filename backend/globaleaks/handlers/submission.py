@@ -11,8 +11,9 @@ from globaleaks.third_party.rstr import rstr
 
 from twisted.internet.defer import inlineCallbacks
 from globaleaks.settings import transact, GLSetting
-from globaleaks.models import Context, InternalTip, Receiver, WhistleblowerTip, \
-    Node, InternalFile
+from globaleaks.models import Node, Context, Receiver, \
+    InternalTip, ReceiverTip, WhistleblowerTip, \
+    InternalFile
 from globaleaks import security
 from globaleaks.handlers.base import BaseHandler
 from globaleaks.handlers.admin import db_get_context_steps
@@ -39,12 +40,39 @@ def wb_serialize_internaltip(internaltip):
     return response
 
 
-def db_create_whistleblower_tip(store, wb_signature, internaltip_id):
+def db_create_receivertip(store, receiver, internaltip):
+    """
+    Create ReceiverTip for the required tier of Receiver.
+    """
+    log.debug('Creating ReceiverTip for receiver: %s' % receiver.id)
+
+    receivertip = ReceiverTip()
+    receivertip.internaltip_id = internaltip.id
+    receivertip.receiver_id = receiver.id
+
+    store.add(receivertip)
+
+    return receivertip.id
+
+
+def db_create_whistleblower_tip(store, wb_signature, internaltip):
     wbtip = WhistleblowerTip()
     wbtip.access_counter = 0
     wbtip.wb_signature = wb_signature
-    wbtip.internaltip_id = internaltip_id
+    wbtip.internaltip_id = internaltip.id
+
     store.add(wbtip)
+
+    created_rtips = []
+
+    for receiver in internaltip.receivers:
+        rtip_id = db_create_receivertip(store, receiver, internaltip)
+
+    internaltip.new = False
+
+    if len(created_rtips):
+        log.debug("The finalized submissions had created %d ReceiverTip(s)" % len(created_rtips))
+
 
 def hybrid_get_receipt_hash(store):
     """
@@ -211,7 +239,10 @@ def db_create_submission(store, token, request, language):
         log.err("Submission create: receivers import fail: %s" % excep)
         raise excep
 
+    db_create_whistleblower_tip(store, request['wb_signature'], submission)
+
     submission_dict = wb_serialize_internaltip(submission)
+
     return submission_dict
 
 
@@ -231,24 +262,21 @@ class SubmissionCreate(BaseHandler):
     @unauthenticated
     def post(self):
         """
-        Request: SubmissionDesc
-        Response: SubmissionDesc
+        Request: None
+        Response: SubmissionDesc (Token)
         Errors: ContextIdNotFound, InvalidInputFormat, SubmissionFailFields
 
         This creates an empty submission for the requested context,
         and returns submissionStatus with empty fields and a Submission Unique String,
         This is the unique token used during the submission procedure.
-        header session_id is used as authentication secret for the next interaction.
-        expire after the time set by Admin (Context dependent setting)
 
-        --- has to became:
-        Request: empty
-        Response: SubmissionDesc + Token
-        Errors: None
-
-        This create a Token, require to complete the submission later
+        This create a Token, require to complete the submission later.
         """
-        request = self.validate_message(self.request.body, requests.SubmissionDesc)
+
+        if not GLSetting.memory_copy.accept_submissions:
+            raise errors.SubmissionDisabled
+
+        request = self.validate_message(self.request.body, requests.TokenDesc)
 
         token = Token('submission', request['context_id'])
         token.set_difficulty(Alarm().get_token_difficulty())
@@ -257,6 +285,7 @@ class SubmissionCreate(BaseHandler):
         token_answer.update({'id': token_answer['token_id']})
         token_answer.update({'context_id': request['context_id']})
         token_answer.update({'human_captcha_answer': 0})
+        token_answer.update({'receivers': []})
 
         self.set_status(201)  # Created
         self.finish(token_answer)
@@ -279,34 +308,17 @@ class SubmissionInstance(BaseHandler):
 
         PUT finalize the submission
         """
-
-        @transact
-        def put_transact(store, token, request):
-            status = db_create_submission(store, token, request, self.request.language)
-
-            if len(request['wb_signature']):
-                log.debug("End2End encryption submission: handshake fingerprint (TODO sign)")
-            else:
-                log.debug("End2End disabled: receipt is going to be generated")
-                hash, display = hybrid_get_receipt_hash(store)
-                print "DEBUG **", hash, display
-                status['receipt'] = display
-                request['wb_signature'] = hash
-
-            db_create_whistleblower_tip(store, request['wb_signature'], status['id'])
-            return status
-
         request = self.validate_message(self.request.body, requests.SubmissionDesc)
 
         # the .get method raise an exception if the token is invalid
         token = TokenList.get(token_id)
 
         if not token.context_associated == request['context_id']:
-            raise errors.InvalidInputFormat("Token context unaligned with REST url")
+            raise errors.InvalidInputFormat("Token context does not match the one specified in submission payload")
 
         token.validate(request)
 
-        status = yield put_transact(token, request)
+        status = yield create_submission(token, request, self.request.language)
 
         TokenList.delete(token_id)
 

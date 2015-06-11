@@ -8,11 +8,13 @@ GLClient.controller('WizardCtrl', ['$scope', '$rootScope', '$location', '$route'
 
     $scope.email_regexp = CONSTANTS.email_regexp;
 
-    finished = false;
+    var finished = false;
 
     $scope.open_modal_allow_unencrypted = function() {
-      if ($scope.admin.node.allow_unencrypted)
+      if ($scope.admin.node.allow_unencrypted) {
         return;
+      }
+
       var modalInstance = $modal.open({
         templateUrl: 'views/partials/disable_encryption.html',
         controller: 'DisableEncryptionCtrl'
@@ -37,7 +39,7 @@ GLClient.controller('WizardCtrl', ['$scope', '$rootScope', '$location', '$route'
           'context': $scope.context
         };
 
-        $http.post('/admin/wizard', $scope.wizard).success(function(response) {
+        $http.post('admin/wizard', $scope.wizard).success(function(response) {
           /* needed in order to reload node variables */
           $rootScope.$broadcast("REFRESH");
           $location.path("/admin/landing");

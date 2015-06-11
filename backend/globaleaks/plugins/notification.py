@@ -42,51 +42,36 @@ class MailNotification(Notification):
     def get_mail_body_and_title(self, event):
         # This function, that probably can be optimized with some kind of pattern
         # return body and title computed for the event + template + keywords compute
-        if event.type == u'encrypted_tip':
+        if event.type == u'tip':
             body = Templating().format_template(
-                event.notification_settings['encrypted_tip_template'], event)
+                event.notification_settings['tip_mail_template'], event)
             title = Templating().format_template(
-                event.notification_settings['encrypted_tip_mail_title'], event)
-        elif event.type == u'plaintext_tip':
+                event.notification_settings['tip_mail_title'], event)
+        elif event.type == u'file':
             body = Templating().format_template(
-                event.notification_settings['plaintext_tip_template'], event)
+                event.notification_settings['file_mail_template'], event)
             title = Templating().format_template(
-                event.notification_settings['plaintext_tip_mail_title'], event)
-        elif event.type == u'encrypted_file':
+                event.notification_settings['file_mail_title'], event)
+        elif event.type == u'comment':
             body = Templating().format_template(
-                event.notification_settings['encrypted_file_template'], event)
+                event.notification_settings['comment_mail_template'], event)
             title = Templating().format_template(
-                event.notification_settings['encrypted_file_mail_title'], event)
-        elif event.type == u'plaintext_file':
+                event.notification_settings['comment_mail_title'], event)
+        elif event.type == u'message':
             body = Templating().format_template(
-                event.notification_settings['plaintext_file_template'], event)
+                event.notification_settings['message_mail_template'], event)
             title = Templating().format_template(
-                event.notification_settings['plaintext_file_mail_title'], event)
-        elif event.type == u'encrypted_comment':
-            body = Templating().format_template(
-                event.notification_settings['encrypted_comment_template'], event)
-            title = Templating().format_template(
-                event.notification_settings['encrypted_comment_mail_title'], event)
-        elif event.type == u'plaintext_comment':
-            body = Templating().format_template(
-                event.notification_settings['plaintext_comment_template'], event)
-            title = Templating().format_template(
-                event.notification_settings['plaintext_comment_mail_title'], event)
-        elif event.type == u'encrypted_message':
-            body = Templating().format_template(
-                event.notification_settings['encrypted_message_template'], event)
-            title = Templating().format_template(
-                event.notification_settings['encrypted_message_mail_title'], event)
-        elif event.type == u'plaintext_message':
-            body = Templating().format_template(
-                event.notification_settings['plaintext_message_template'], event)
-            title = Templating().format_template(
-                event.notification_settings['plaintext_message_mail_title'], event)
+                event.notification_settings['message_mail_title'], event)
         elif event.type == u'upcoming_tip_expiration':
             body = Templating().format_template(
                 event.notification_settings['tip_expiration_template'], event)
             title = Templating().format_template(
                 event.notification_settings['tip_expiration_mail_title'], event)
+        elif event.type == u'receiver_threshold_reached_mail_template':
+            body = Templating().format_template(
+                event.notification_settings['receiver_threshold_reached_mail_template'], event)
+            title = Templating().format_template(
+                event.notification_settings['receiver_threshold_reached_mail_title'], event)
         else:
             raise NotImplementedError("This event_type (%s) is not supported" % event.type)
 

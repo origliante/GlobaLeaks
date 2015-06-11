@@ -11,6 +11,7 @@ from globaleaks.handlers import admin, submission, authentication, receiver, rti
 from globaleaks.jobs import delivery_sched
 from globaleaks.utils.token import Token
 
+
 class TTip(helpers.TestGL):
 
     # filled in setup
@@ -19,7 +20,6 @@ class TTip(helpers.TestGL):
     submission_desc = None
 
     # filled while the emulation tests
-    receipt = None
     itip_id = wb_tip_id = rtip1_id = rtip2_id = None
     wb_data = receiver1_data = receiver2_data = None
 
@@ -27,11 +27,10 @@ class TTip(helpers.TestGL):
         'content': '',
     }
 
-class TestTipInstance(TTip):
 
+class TestTipInstance(TTip):
     @inlineCallbacks
     def setup_tip_environment(self):
-
         self.context_desc = yield admin.create_context(self.dummyContext, 'en')
 
         self.dummyReceiver_1['contexts'] = self.dummyReceiver_2['contexts'] = [self.context_desc['id']]
@@ -55,29 +54,23 @@ class TestTipInstance(TTip):
 
         self.assertEqual(self.submission_desc['wb_steps'], dummySubmissionDict['wb_steps'])
 
-    @inlineCallbacks
-    def get_wb_receipt_on_finalized(self):
-        """
-        emulate auth, get wb_tip.id, get the data like GET /tip/xxx
-        """
-        if not self.receipt:
-            self.receipt = yield submission.create_whistleblower_tip(self.submission_desc)
+        tips_receiver_1 = yield receiver.get_receivertip_list(self.receiver1_desc['id'], 'en')
+        tips_receiver_2 = yield receiver.get_receivertip_list(self.receiver2_desc['id'], 'en')
 
-        self.assertGreater(len(self.receipt), 5)
+        self.rtip1_id = tips_receiver_1[0]['id']
+        self.rtip2_id = tips_receiver_2[0]['id']
 
     @inlineCallbacks
     def wb_auth_with_receipt(self):
         if not self.wb_tip_id:
-            self.get_wb_receipt_on_finalized()
-
-            self.wb_tip_id = yield authentication.login_wb(self.receipt)
+            self.wb_tip_id, _, _ = yield authentication.login_wb(self.submission_desc['receipt'])
             # is the self.current_user.user_id
 
         self.assertTrue(re.match(requests.uuid_regexp, self.wb_tip_id))
 
     @inlineCallbacks
     def wb_auth_with_bad_receipt(self):
-        retval = yield authentication.login_wb(u"fakereceipt123")
+        retval, _, _ = yield authentication.login_wb(u"fakereceipt123")
         self.assertFalse(retval)
 
     @inlineCallbacks
@@ -87,24 +80,11 @@ class TestTipInstance(TTip):
         self.assertEqual(self.wb_data['wb_steps'], self.submission_desc['wb_steps'])
 
     @inlineCallbacks
-    def create_receivers_tip(self):
-        receivertips = yield delivery_sched.tip_creation()
-
-        self.assertEqual(len(receivertips), 2)
-        self.assertTrue(re.match(requests.uuid_regexp, receivertips[0]))
-        self.assertTrue(re.match(requests.uuid_regexp, receivertips[1]))
-
-        tips_receiver_1 = yield receiver.get_receivertip_list(self.receiver1_desc['id'], 'en')
-        tips_receiver_2 = yield receiver.get_receivertip_list(self.receiver2_desc['id'], 'en')
-        self.rtip1_id = tips_receiver_1[0]['id']
-        self.rtip2_id = tips_receiver_2[0]['id']
-
-    @inlineCallbacks
     def access_receivers_tip(self):
-        auth1, _, _ = yield authentication.login_receiver(self.receiver1_desc['id'], helpers.VALID_PASSWORD1)
+        auth1, _, _ = yield authentication.login(self.receiver1_desc['id'], helpers.VALID_PASSWORD1, u'receiver')
         self.assertEqual(auth1, self.receiver1_desc['id'])
 
-        auth2, _, _ = yield authentication.login_receiver(self.receiver2_desc['id'], helpers.VALID_PASSWORD1)
+        auth2, _, _ = yield authentication.login(self.receiver2_desc['id'], helpers.VALID_PASSWORD1, u'receiver')
         self.assertEqual(auth2, self.receiver2_desc['id'])
 
         for i in range(1, 2):
@@ -122,8 +102,6 @@ class TestTipInstance(TTip):
         """
         Test that an authenticated Receiver1 can't access to the Tip generated for Rcvr2
         """
-
-        # Instead of yield authentication.login_receiver(username/pasword), is used:
         auth_receiver_1 = self.receiver1_desc['id']
 
         yield self.assertFailure(rtip.get_tip(auth_receiver_1, self.rtip2_id, 'en'),
@@ -436,11 +414,9 @@ class TestTipInstance(TTip):
     @inlineCallbacks
     def test_full_receiver_wb_workflow(self):
         yield self.setup_tip_environment()
-        yield self.get_wb_receipt_on_finalized()
         yield self.wb_auth_with_receipt()
         yield self.wb_auth_with_bad_receipt()
         yield self.wb_retrive_tip_data()
-        yield self.create_receivers_tip()
         yield self.access_receivers_tip()
         yield self.strong_receiver_auth()
 

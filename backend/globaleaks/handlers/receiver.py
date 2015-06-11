@@ -10,10 +10,11 @@ from storm.expr import Desc
 
 from globaleaks.handlers.admin import pgp_options_parse
 from globaleaks.handlers.authentication import authenticated, transport_security_check
-from globaleaks.handlers.base import BaseHandler, GLApiCache
+from globaleaks.handlers.base import BaseHandler
 from globaleaks.handlers.node import get_public_receiver_list
 from globaleaks.models import Receiver, ReceiverTip, ReceiverFile, Message, Node
 from globaleaks.rest import requests, errors
+from globaleaks.rest.apicache import GLApiCache
 from globaleaks.security import change_password
 from globaleaks.settings import transact, transact_ro, GLSetting
 from globaleaks.utils.structures import Rosetta, get_localized_values
@@ -34,12 +35,12 @@ def receiver_serialize_receiver(receiver, language):
         'pgp_key_expiration': datetime_to_ISO8601(receiver.pgp_key_expiration),
         'pgp_key_status': receiver.pgp_key_status,
         'pgp_key_public': receiver.pgp_key_public,
-        'pgp_e2e_public': receiver.pgp_e2e_public,
-        'pgp_e2e_private': receiver.pgp_e2e_private,
+        'e2e_key_public': receiver.user.e2e_key_public,
         'tip_notification': receiver.tip_notification,
         'ping_notification': receiver.ping_notification,
-        'mail_address': receiver.mail_address,
+        'mail_address': receiver.user.mail_address,
         'ping_mail_address': receiver.ping_mail_address,
+        'tip_expiration_threshold': receiver.tip_expiration_threshold,
         'contexts': [c.id for c in receiver.contexts],
         'password': u'',
         'old_password': u'',
@@ -108,15 +109,10 @@ def update_receiver_settings(store, receiver_id, request, language):
 
         receiver.user.password_change_date = datetime_now()
 
-    mail_address = request['mail_address']
     ping_mail_address = request['ping_mail_address']
 
-    if mail_address != receiver.mail_address:
-        log.err("Email cannot be change by receiver, only by admin " \
-                "%s rejected. Kept %s" % (receiver.mail_address, mail_address))
-
     if ping_mail_address != receiver.ping_mail_address:
-        log.info("Ping email going to be update, %s => %s" % (
+        log.info("Ping email going to be updated, %s => %s" % (
             receiver.ping_mail_address, ping_mail_address))
         receiver.ping_mail_address = ping_mail_address
 
@@ -124,10 +120,8 @@ def update_receiver_settings(store, receiver_id, request, language):
 
     pgp_options_parse(receiver, request)
 
-    #TODO: validate armored pgp keys
-
-    receiver.pgp_e2e_public = request['pgp_e2e_public']
-    receiver.pgp_e2e_private = request['pgp_e2e_private']
+    receiver.user.e2e_key_public = request['e2e_key_public']
+    receiver.user.e2e_key_private = request['e2e_key_private']
 
     return receiver_serialize_receiver(receiver, language)
 

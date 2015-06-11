@@ -9,12 +9,13 @@ import os
 
 from twisted.internet.defer import inlineCallbacks
 
+from globaleaks import models, LANGUAGES_SUPPORTED
+from globaleaks.handlers.base import BaseHandler
+from globaleaks.handlers.authentication import transport_security_check, unauthenticated
 from globaleaks.utils.utility import datetime_to_ISO8601
 from globaleaks.utils.structures import Rosetta, get_localized_values
 from globaleaks.settings import transact_ro, GLSetting
-from globaleaks.handlers.base import BaseHandler, GLApiCache
-from globaleaks.handlers.authentication import transport_security_check, unauthenticated
-from globaleaks import models, LANGUAGES_SUPPORTED
+from globaleaks.rest.apicache import GLApiCache
 
 
 def get_field_option_localized_keys(field_type):
@@ -76,6 +77,8 @@ def anon_serialize_node(store, language):
         'tor2web_submission': GLSetting.memory_copy.tor2web_submission,
         'tor2web_receiver': GLSetting.memory_copy.tor2web_receiver,
         'tor2web_unauth': GLSetting.memory_copy.tor2web_unauth,
+        'submission_minimum_delay' : 0 if GLSetting.devel_mode else GLSetting.memory_copy.submission_minimum_delay,
+        'submission_maximum_ttl' : GLSetting.memory_copy.submission_maximum_ttl,
         'ahmia': node.ahmia,
         'can_postpone_expiration': node.can_postpone_expiration,
         'can_delete_submission': node.can_delete_submission,
@@ -118,8 +121,7 @@ def anon_serialize_context(store, context, language):
     ret_dict = {
         'id': context.id,
         'tip_timetolive': context.tip_timetolive,
-        'submission_introduction': u'NYI',  # unicode(context.submission_introduction), # optlang
-        'submission_disclaimer': u'NYI',  # unicode(context.submission_disclaimer), # optlang
+        'description': context.description,
         'select_all_receivers': context.select_all_receivers,
         'maximum_selectable_receivers': context.maximum_selectable_receivers,
         'show_small_cards': context.show_small_cards,
@@ -194,7 +196,7 @@ def anon_serialize_field(store, field, language):
         'y': field.y,
         'options': options,
         'children': fields,
-        'value': ''
+        'value': {} if (field.type == 'checkbox') else ''
     }
 
     return get_localized_values(ret_dict, field, field.localized_strings, language)
@@ -238,7 +240,7 @@ def anon_serialize_receiver(receiver, language):
         'configuration': receiver.configuration,
         'presentation_order': receiver.presentation_order,
         'pgp_key_status': receiver.pgp_key_status,
-        "pgp_e2e_public": receiver.pgp_e2e_public,
+        "e2e_key_public": receiver.user.e2e_key_public,
         'contexts': [c.id for c in receiver.contexts]
     }
 

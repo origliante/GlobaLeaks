@@ -9,7 +9,7 @@
 # https://github.com/globaleaks/GlobaLeaks/wiki/Customization-guide#customize-notification
 
 from globaleaks.settings import GLSetting
-from globaleaks.utils.utility import ISO8601_to_pretty_str_tz, ISO8601_to_day_str
+from globaleaks.utils.utility import ISO8601_to_pretty_str, ISO8601_to_day_str, datetime_now
 
 def dump_submission_steps(wb_steps):
     dumptext = u"FIELD_MAIL_DUMP_STILL_NEED_TO_BE_IMPLEMENTED"
@@ -35,14 +35,10 @@ class Templating(object):
         """
 
         supported_event_types = {
-                                  u'encrypted_tip': EncryptedTipKeyword,
-                                  u'plaintext_tip': TipKeyword,
-                                  u'encrypted_file': EncryptedFileKeyword,
-                                  u'plaintext_file': FileKeyword,
-                                  u'encrypted_comment': EncryptedCommentKeyword,
-                                  u'plaintext_comment': CommentKeyword,
-                                  u'encrypted_message': EncryptedMessageKeyword,
-                                  u'plaintext_message': MessageKeyword,
+                                  u'tip': TipKeyword,
+                                  u'file': FileKeyword,
+                                  u'comment': CommentKeyword,
+                                  u'message': MessageKeyword,
                                   u'zip_collection': ZipFileKeyword,
                                   u'ping_mail': PingMailKeyword,
                                   u'admin_pgp_expiration_alert': AdminPGPAlertKeyword,
@@ -51,6 +47,7 @@ class Templating(object):
                                   # and currently only one template is defined
                                   # considering exportable only not non sensitive info
                                   u'upcoming_tip_expiration': TipKeyword,
+                                  u'receiver_threshold_reached': ReceiverKeyword,
                                 }
 
         if event_dicts.type not in supported_event_types.keys():
@@ -136,11 +133,8 @@ class TipKeyword(_KeyWord):
         '%TipT2WURL%',
         '%TipNum%',
         '%EventTime%',
-        '%ExpirationWatch%',
-                    # ExpirationWatch
-                    # TODO DB, like "notify 48 hours before"
-                    # can be used in template to say "will expire in 48 hours"
         '%ExpirationDate%',
+        '%ExpirationWatch%'
     ]
 
     def __init__(self, node_desc, context_desc, fields_desc, receiver_desc, tip_desc, *x):
@@ -193,29 +187,16 @@ class TipKeyword(_KeyWord):
         return unicode(retval)
 
     def EventTime(self):
-        return ISO8601_to_pretty_str_tz(self.tip['creation_date'], float(self.receiver['timezone']))
+        return ISO8601_to_pretty_str(self.tip['creation_date'], float(self.receiver['timezone']))
 
     def ExpirationDate(self):
         # is not time zone dependent, is UTC for everyone
-        return ISO8601_to_day_str(self.tip['expiration_date'])
+        return ISO8601_to_day_str(self.tip['expiration_date'], float(self.receiver['timezone']))
 
     def ExpirationWatch(self):
-        # Express in hours, but has to be retrieved from the Receiver not from Tip.
-        return unicode(48)
-
-class EncryptedTipKeyword(TipKeyword):
-    encrypted_tip_keywords = [
-        '%TipFields%'
-    ]
-
-    def __init__(self, node_desc, context_desc, fields_desc, receiver_desc, tip_desc, *x):
-        super(EncryptedTipKeyword, self).__init__(node_desc, context_desc, fields_desc,
-                                                  receiver_desc, tip_desc, None)
-        self.keyword_list += EncryptedTipKeyword.encrypted_tip_keywords
-
-    def TipFields(self):
-        return dump_submission_steps(self.tip['wb_steps'])
-
+        missing_time = self.tip['expiration_date'] - datetime_now()
+        missing_hours = int(divmod(missing_time.total_seconds(), 3600)[0])
+        return unicode(missing_hours)
 
 class CommentKeyword(TipKeyword):
     comment_keywords = [
@@ -233,25 +214,7 @@ class CommentKeyword(TipKeyword):
         return self.comment['type']
 
     def EventTime(self):
-        return ISO8601_to_pretty_str_tz(self.comment['creation_date'], float(self.receiver['timezone']))
-
-
-class EncryptedCommentKeyword(CommentKeyword):
-    encrypted_comment_keywords = [
-        '%CommentContent%',
-    ]
-
-    def __init__(self, node_desc, context_desc, fields_desc, receiver_desc, tip_desc, comment_desc):
-        super(EncryptedCommentKeyword, self).__init__(node_desc, context_desc, fields_desc,
-                                                      receiver_desc, tip_desc, comment_desc)
-        self.keyword_list += EncryptedCommentKeyword.encrypted_comment_keywords
-
-    def CommentContent(self):
-        """
-        Think about Comment.system_content before document and insert this
-        feature in the default templates
-        """
-        return self.comment['content']
+        return ISO8601_to_pretty_str(self.comment['creation_date'], float(self.receiver['timezone']))
 
 
 class MessageKeyword(TipKeyword):
@@ -272,21 +235,7 @@ class MessageKeyword(TipKeyword):
         return self.message['author']
 
     def EventTime(self):
-        return ISO8601_to_pretty_str_tz(self.message['creation_date'], float(self.receiver['timezone']))
-
-class EncryptedMessageKeyword(MessageKeyword):
-    encrypted_message_keywords = [
-        '%MessageContent%',
-    ]
-
-    def __init__(self, node_desc, context_desc, fields_desc, receiver_desc, tip_desc, message_desc):
-        super(EncryptedMessageKeyword, self).__init__(node_desc, context_desc,
-                                                      fields_desc, receiver_desc,
-                                                      tip_desc, message_desc)
-        self.keyword_list += EncryptedMessageKeyword.encrypted_message_keywords
-
-    def MessageContent(self):
-        return self.message['content']
+        return ISO8601_to_pretty_str(self.message['creation_date'], float(self.receiver['timezone']))
 
 
 class FileKeyword(TipKeyword):
@@ -309,31 +258,13 @@ class FileKeyword(TipKeyword):
         return self.file['name']
 
     def EventTime(self):
-        return ISO8601_to_pretty_str_tz(self.file['creation_date'], float(self.receiver['timezone']))
+        return ISO8601_to_pretty_str(self.file['creation_date'], float(self.receiver['timezone']))
 
     def FileSize(self):
         return self.file['size']
 
     def FileType(self):
         return self.file['content_type']
-
-
-class EncryptedFileKeyword(FileKeyword):
-    """
-    FileDescription not yet implemented in UI, but here has to go
-    """
-    encrypted_file_keywords = [
-        '%FileDescription%'
-    ]
-
-    def __init__(self, node_desc, context_desc, fields_desc, receiver_desc, tip_desc, file_desc):
-        super(EncryptedFileKeyword, self).__init__(node_desc, context_desc,
-                                                   fields_desc, receiver_desc,
-                                                   tip_desc, file_desc)
-        self.keyword_list += EncryptedFileKeyword.encrypted_file_keywords
-
-    def FileDescription(self):
-        pass
 
 
 class ZipFileKeyword(TipKeyword):
@@ -432,3 +363,15 @@ class PGPAlertKeyword(_KeyWord):
             key = ""
 
         return "\t0x%s (%s)" % (key, ISO8601_to_day_str(self.receiver['pgp_key_expiration']))
+
+class ReceiverKeyword(_KeyWord):
+    """
+    At the moment is pretty the same of _Keyword, but require a
+    dedicated __init__ because the params are screw up otherwise,
+    but quite likely, is time to think some notification with more
+    Receiver information: this will be the template.
+    """
+    def __init__(self, node_desc, context_desc, fields_desc, receiver_desc, tip_desc, *x):
+        super(ReceiverKeyword, self).__init__(node_desc, context_desc,
+                                              fields_desc, receiver_desc)
+

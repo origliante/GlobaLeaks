@@ -17,7 +17,7 @@ import re
 import types
 from cryptography.hazmat.primitives.constant_time import bytes_eq
 from twisted.internet import fdesc
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 from twisted.python.failure import Failure
 from cyclone import escape, httputil
 from cyclone.escape import native_str
@@ -29,6 +29,7 @@ from globaleaks.security import GLSecureTemporaryFile, directory_traversal_check
 from globaleaks.utils.utility import log, log_remove_escapes, log_encode_html, datetime_now, deferred_sleep
 from globaleaks.utils.mailutils import mail_exception
 
+DISABLE_ANTI_XSRF_PROTECTION = False
 
 GLUploads = {}
 
@@ -85,8 +86,8 @@ class GLHTTPConnection(HTTPConnection):
             if content_length:
                 megabytes = int(content_length) / (1024 * 1024)
                 if megabytes > GLSetting.defaults.maximum_filesize:
-                     raise _BadRequestException(
-                         "Request exceeded size limit %d" % GLSetting.defaults.maximum_filesize)
+                    raise _BadRequestException("Request exceeded size limit %d" %
+                                               GLSetting.defaults.maximum_filesize)
 
                 if headers.get("Expect") == "100-continue":
                     self.transport.write("HTTP/1.1 100 (Continue)\r\n\r\n")
@@ -120,7 +121,8 @@ class BaseHandler(RequestHandler):
 
         # just reading the property is enough to
         # set the cookie as a side effect.
-        self.xsrf_token
+        if not DISABLE_ANTI_XSRF_PROTECTION:
+            self.xsrf_token
 
         # to avoid version attacks
         self.set_header("Server", "globaleaks")
@@ -158,6 +160,9 @@ class BaseHandler(RequestHandler):
         """
             Override needed to change name of header name
         """
+        if DISABLE_ANTI_XSRF_PROTECTION:
+            return
+
         token = self.request.headers.get("X-XSRF-TOKEN")
         if not token:
             token = self.get_argument('xsrf-token', default=None)
@@ -253,35 +258,46 @@ class BaseHandler(RequestHandler):
         message_type: the GLType class it should match.
         """
         if isinstance(message_template, dict):
-            valid_jmessage = {}
-            for key in message_template.keys():
-                if key not in jmessage:
-                    log.err('validate_message: key %s not in %s' % (key, jmessage))
-                    raise errors.InvalidInputFormat('wrong schema: missing %s' % key)
-                else:
-                    valid_jmessage[key] = jmessage[key]
 
-            if GLSetting.loglevel == "DEBUG":
-                # check if wrong keys are reaching the GLBackend, they are
-                # stripped in the previous loop, because valid_jmessage is returned
-                for double_k in jmessage.keys():
-                    if double_k not in message_template.keys():
-                        log.err("[!?] validate_message: key %s not expected" % double_k)
+            success_check = 0
+            for key, value in jmessage.iteritems():
+                if key not in message_template:
+                    log.debug("Received key %s, Unexpected in the template:" % key)
+                    log.debug(message_template.keys())
+                    # raise errors.InvalidInputFormat("Key expected not present (%s)" % key)
+                    continue
 
-            jmessage = valid_jmessage
+                if not BaseHandler.validate_type(value, message_template[key]):
+                    log.err("Received key %s: type validation fail " % key)
+                    raise errors.InvalidInputFormat("Expected key (%s) vail type validation" % key)
+                success_check += 1
 
             for key, value in message_template.iteritems():
+
+                if key not in jmessage.keys():
+                    log.debug("Key %s expected but missing!" % key)
+                    log.debug("Received schema %s - Expected %s" %
+                              (jmessage.keys(), message_template.keys() ))
+                    raise errors.InvalidInputFormat("Missing key %s" % key)
+
                 if not BaseHandler.validate_type(jmessage[key], value):
-                    raise errors.InvalidInputFormat("REST integrity check 1, fail in %s" % key)
+                    log.err("Expected key: %s type validation fail" % key)
+                    raise errors.InvalidInputFormat("Key (%s) double validation fail" % key)
+                success_check += 1
 
-            for key, value in jmessage.iteritems():
-                if not BaseHandler.validate_type(value, message_template[key]):
-                    raise errors.InvalidInputFormat("REST integrity check 2, fail in %s" % key)
-
-            return True
+            if success_check == len(message_template.keys()) * 2:
+                return True
+            else:
+                log.err("Success counter double check fail: %d" % success_check)
+                raise errors.InvalidInputFormat("Success counter double check fail %s" %
+                                                message_template.keys())
 
         elif isinstance(message_template, list):
-            return all(BaseHandler.validate_type(x, message_template[0]) for x in jmessage)
+            ret = all(BaseHandler.validate_type(x, message_template[0]) for x in jmessage)
+            if not ret:
+                raise errors.InvalidInputFormat("Not every element in %s is %s" %
+                                                (jmessage, message_template[0]))
+            return True
 
         else:
             raise errors.InvalidInputFormat("invalid json massage: expected dict or list")
@@ -296,6 +312,8 @@ class BaseHandler(RequestHandler):
 
         if BaseHandler.validate_jmessage(jmessage, message_template):
             return jmessage
+
+        raise errors.InvalidInputFormat("Unexpected condition!?")
 
 
     def output_stripping(self, message, message_template):
@@ -317,10 +335,10 @@ class BaseHandler(RequestHandler):
         Is used also to log the complete request, if the option is
         command line specified
         """
-
         # just reading the property is enough to
         # set the cookie as a side effect.
-        self.xsrf_token
+        if not DISABLE_ANTI_XSRF_PROTECTION:
+            self.xsrf_token
 
         if not validate_host(self.request.host):
             raise errors.InvalidHostSpecified
@@ -387,7 +405,7 @@ class BaseHandler(RequestHandler):
         It's here implemented to supports the I/O logging if requested
         with the command line options --io $number_of_request_recorded
         """
-        from globaleaks.anomaly import outcoming_event_monitored, EventTrack
+        from globaleaks.event import outcoming_event_monitored, EventTrack
 
 
         # This is the event tracker, used to keep track of the
@@ -527,7 +545,7 @@ class BaseHandler(RequestHandler):
         try:
             if (int(self.request.arguments['flowTotalSize'][0]) / (1024 * 1024)) > GLSetting.defaults.maximum_filesize:
                 log.err("File upload request rejected: file too big")
-                raise errors.FileTooBig
+                raise errors.FileTooBig(GLSetting.memory_copy.maximum_filesize)
 
             if self.request.arguments['flowIdentifier'][0] not in GLUploads:
                 f = GLSecureTemporaryFile(GLSetting.tmp_upload_path)
@@ -622,47 +640,4 @@ class BaseRedirectHandler(BaseHandler, RedirectHandler):
         """
         if not validate_host(self.request.host):
             raise errors.InvalidHostSpecified
-
-
-class GLApiCache(object):
-    memory_cache_dict = {}
-
-    @classmethod
-    @inlineCallbacks
-    def get(cls, resource_name, language, function, *args, **kwargs):
-        try:
-            if resource_name in cls.memory_cache_dict \
-                    and language in cls.memory_cache_dict[resource_name]:
-                returnValue(cls.memory_cache_dict[resource_name][language])
-
-            value = yield function(*args, **kwargs)
-            if resource_name not in cls.memory_cache_dict:
-                cls.memory_cache_dict[resource_name] = {}
-            cls.memory_cache_dict[resource_name][language] = value
-            returnValue(value)
-        except KeyError:
-            log.debug("KeyError exception while operating on the cache; probable race")
-            returnValue(None)
-
-    @classmethod
-    def set(cls, resource_name, language, value):
-        try:
-            if resource_name not in GLApiCache.memory_cache_dict:
-                cls.memory_cache_dict[resource_name] = {}
-
-            cls.memory_cache_dict[resource_name][language] = value
-        except KeyError:
-            log.debug("KeyError exception while operating on the cache; probable race")
-            returnValue(None)
-
-    @classmethod
-    def invalidate(cls, resource_name = None):
-        """
-        When a function has an update, all the language need to be
-        invalidated, because the change is still effective
-        """
-        if resource_name is None:
-            cls.memory_cache_dict = {}
-        else:
-            cls.memory_cache_dict.pop(resource_name, None)
 

@@ -24,6 +24,63 @@ class TestTransaction(helpers.TestGL):
         store.commit()
         store.close()
 
+    @transact
+    def _transact_with_stuff(self, store):
+        r = self.localization_set(self.dummyReceiver_1, Receiver, 'en')
+        receiver_user = User(self.dummyReceiverUser_1)
+        receiver_user.last_login = self.dummyReceiverUser_1['last_login']
+        receiver_user.password_change_needed = self.dummyReceiverUser_1['password_change_needed']
+        receiver_user.password_change_date = datetime_null()
+        receiver_user.mail_address = self.dummyReceiverUser_1['mail_address']
+
+        # Avoid receivers with the same username!
+        receiver_user.username = unicode("xxx")
+
+        store.add(receiver_user)
+
+        receiver = Receiver(r)
+        receiver.user_id = receiver_user.id
+        receiver.pgp_key_status = u'disabled'
+        store.add(receiver)
+
+        # Set receiver.id = receiver.user.username = receiver.user.id
+        receiver.id = receiver_user.username = receiver_user.id
+
+        return receiver.id
+
+    @transact
+    def _transact_with_stuff_failing(self, store):
+        r = self.localization_set(self.dummyReceiver_1, Receiver, 'en')
+        receiver_user = User(self.dummyReceiverUser_1)
+        receiver_user.last_login = self.dummyReceiverUser_1['last_login']
+        receiver_user.password_change_needed = self.dummyReceiverUser_1['password_change_needed']
+        receiver_user.password_change_date = datetime_null()
+        receiver_user.mail_address = self.dummyReceiverUser_1['mail_address']
+        store.add(receiver_user)
+
+        receiver = Receiver(r)
+        receiver.user_id = receiver_user.id
+        receiver.pgp_key_status = u'disabled'
+        store.add(receiver)
+
+        raise exceptions.DisconnectionError
+
+    @transact_ro
+    def _transact_ro_add_context(self, store):
+        c = self.localization_set(self.dummyContext, Context, 'en')
+        context = Context(c)
+
+        context.tip_timetolive = 1000
+        context.description = context.name = \
+            context.submission_disclaimer = \
+            context.submission_introduction = { "en": u'Localized723' }
+        store.add(context)
+        return context.id
+
+    @transact_ro
+    def _transact_ro_context_bla_bla(self, store, context_id):
+        self.assertEqual(store.find(Context, Context.id == context_id).one(), None)
+
     def test_transaction_with_exception(self):
         yield self.assertFailure(self._transaction_with_exception(), Exception)
 
@@ -52,56 +109,6 @@ class TestTransaction(helpers.TestGL):
         def transaction(store):
             self.assertTrue(getattr(store, 'find'))
         yield transaction()
-
-    @transact
-    def _transact_with_stuff(self, store):
-        r = self.localization_set(self.dummyReceiver_1, Receiver, 'en')
-        receiver_user = User(self.dummyReceiverUser_1)
-        receiver_user.last_login = self.dummyReceiverUser_1['last_login']
-        receiver_user.password_change_needed = self.dummyReceiverUser_1['password_change_needed']
-        receiver_user.password_change_date = datetime_null()
-
-        # Avoid receivers with the same username!
-        receiver_user.username = unicode("xxx")
-
-        store.add(receiver_user)
- 
-        receiver = Receiver(r)
-        receiver.user_id = receiver_user.id
-        receiver.pgp_key_status = u'disabled'
-        receiver.mail_address = self.dummyReceiver_1['mail_address']
-        store.add(receiver)
-
-        return receiver.id
-
-    @transact
-    def _transact_with_stuff_failing(self, store):
-        r = self.localization_set(self.dummyReceiver_1, Receiver, 'en')
-        receiver_user = User(self.dummyReceiverUser_1)
-        receiver_user.last_login = self.dummyReceiverUser_1['last_login']
-        receiver_user.password_change_needed = self.dummyReceiverUser_1['password_change_needed']
-        receiver_user.password_change_date = datetime_null()
-        store.add(receiver_user)
-
-        receiver = Receiver(r)
-        receiver.user_id = receiver_user.id
-        receiver.pgp_key_status = u'disabled'
-        receiver.mail_address = self.dummyReceiver_1['mail_address']
-        store.add(receiver)
-
-        raise exceptions.DisconnectionError
-
-    @transact_ro
-    def _transact_ro_add_context(self, store):
-        c = self.localization_set(self.dummyContext, Context, 'en')
-        context = Context(c)
-
-        context.tip_timetolive = 1000
-        context.description = context.name = \
-            context.submission_disclaimer = \
-            context.submission_introduction = { "en": u'Localized723' }
-        store.add(context)
-        return context.id
 
     @transact_ro
     def _transact_ro_context_bla_bla(self, store, context_id):

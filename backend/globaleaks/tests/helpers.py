@@ -28,17 +28,18 @@ def sendmail_mock(**args):
 
 mailutils.sendmail = sendmail_mock
 
-from globaleaks import db, models, security, anomaly
+from globaleaks import db, models, security, anomaly, event
 from globaleaks.db.datainit import load_appdata, import_memory_variables
 from globaleaks.handlers import files, rtip, wbtip, authentication
-from globaleaks.handlers.base import GLApiCache, GLHTTPConnection, BaseHandler
+from globaleaks.handlers.base import GLHTTPConnection, BaseHandler
 from globaleaks.handlers.admin import create_context, get_context, update_context, create_receiver, db_get_context_steps
 from globaleaks.handlers.admin.field import create_field
 from globaleaks.handlers.rtip import receiver_serialize_tip
 from globaleaks.handlers.wbtip import wb_serialize_tip
-from globaleaks.handlers.submission import create_submission, create_whistleblower_tip
-from globaleaks.jobs import delivery_sched, notification_sched, statistics_sched
+from globaleaks.handlers.submission import create_submission
+from globaleaks.jobs import delivery_sched, notification_sched, statistics_sched, mailflush_sched
 from globaleaks.models import db_forge_obj, ReceiverTip, ReceiverFile, WhistleblowerTip, InternalTip
+from globaleaks.rest.apicache import GLApiCache
 from globaleaks.settings import GLSetting, transact, transact_ro
 from globaleaks.security import GLSecureTemporaryFile
 from globaleaks.third_party import rstr
@@ -70,8 +71,9 @@ with open(os.path.join(TEST_DIR, 'keys/expired_pgp_key.txt')) as pgp_file:
 
 transact.tp = FakeThreadPool()
 authentication.reactor_override = task.Clock()
-anomaly.reactor_override = task.Clock()
+event.reactor_override = task.Clock()
 token.reactor_override = task.Clock()
+mailflush_sched.reactor_override = task.Clock()
 
 
 class UTlog:
@@ -160,7 +162,7 @@ class TestGL(unittest.TestCase):
         GLSetting.memory_copy.allow_unencrypted = True
 
         anomaly.Alarm.reset()
-        anomaly.EventTrackQueue.reset()
+        event.EventTrackQueue.reset()
         statistics_sched.StatisticsSchedule.reset()
 
     def setUp_dummy(self):
@@ -204,7 +206,8 @@ class TestGL(unittest.TestCase):
 
     def get_dummy_receiver_user(self, descpattern):
         new_ru = dict(MockDict().dummyReceiverUser)
-        new_ru['username'] = unicode("%s@%s.xxx" % (descpattern, descpattern))
+        new_ru['username'] = new_ru['mail_address'] = \
+            unicode("%s@%s.xxx" % (descpattern, descpattern))
         return new_ru
 
     def get_dummy_receiver(self, descpattern):
@@ -467,8 +470,6 @@ class TestGLWithPopulatedDB(TestGL):
                                                        self.dummySubmission,
                                                        'en')
 
-        self.dummyWBTip = yield create_whistleblower_tip(self.dummySubmission)
-
     @inlineCallbacks
     def run_delivery_and_notification_scheds(self):
         yield delivery_sched.DeliverySchedule().operation()
@@ -666,6 +667,7 @@ class MockDict():
             'contexts': [],
             'tip_notification': True,
             'ping_notification': True,
+            'tip_expiration_threshold': 72,
             'pgp_key_info': u'',
             'pgp_key_fingerprint': u'',
             'pgp_key_status': u'disabled',
@@ -897,7 +899,9 @@ class MockDict():
             'header_title_receiptpage': u'',
             'landing_page': u'homepage',
             'context_selector_label': u'',
-            'show_contexts_in_alphabetical_order': False
+            'show_contexts_in_alphabetical_order': False,
+            'submission_minimum_delay': 123,
+            'submission_maximum_ttl': 1111,
         }
 
 

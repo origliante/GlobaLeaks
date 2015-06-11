@@ -1,6 +1,6 @@
 GLClient.controller('StatusCtrl',
-  ['$scope', '$rootScope', '$location', '$route', '$routeParams', '$http', '$cookies', 'Authentication', 'Tip', 'WBTip', 'Contexts', 'ReceiverPreferences',
-  function($scope, $rootScope, $location, $route, $routeParams, $http, $cookies, Authentication, Tip, WBTip, Contexts, ReceiverPreferences) {
+  ['$scope', '$rootScope', '$location', '$route', '$routeParams', '$http', '$cookies', 'Authentication', 'Tip', 'WBTip', 'ReceiverPreferences',
+  function($scope, $rootScope, $location, $route, $routeParams, $http, $cookies, Authentication, Tip, WBTip, ReceiverPreferences) {
 
     $scope.tip_id = $routeParams.tip_id;
     $scope.session = Authentication.id;
@@ -11,6 +11,7 @@ GLClient.controller('StatusCtrl',
 
     $scope.getFields = function(field) {
       var ret = [];
+      var fields;
       if (field === undefined) {
         fields = $scope.tip.fields;
       } else {
@@ -25,43 +26,40 @@ GLClient.controller('StatusCtrl',
     };
 
     $scope.filterFields = function(field) {
-      return field.type != 'fileupload';
+      return field.type !== 'fileupload';
     };
 
     $scope.filterReceivers = function(receiver) {
-      return receiver.configuration != 'hidden';
+      return receiver.configuration !== 'hidden';
     };
 
     if (Authentication.role === 'wb') {
       $scope.fileupload_url = '/wbtip/upload';
 
-      $scope.tip = new WBTip(function(tip) {
+      new WBTip(function(tip) {
 
         $scope.tip = tip;
 
-        Contexts.query(function(contexts) {
-
-          angular.forEach(contexts, function(context, k){
-            if (context.id == tip.context_id) {
-              $scope.current_context = context;
-            }
-          });
-
-          if (tip.receivers.length == 1 && tip.msg_receiver_selected == null) {
-            tip.msg_receiver_selected = tip.msg_receivers_selector[0]['key'];
+        angular.forEach($scope.contexts, function(context, k){
+          if (context.id === tip.context_id) {
+            $scope.current_context = context;
           }
-
-          tip.updateMessages();
-
-          $scope.$watch('tip.msg_receiver_selected', function (newVal, oldVal) {
-            if (newVal && newVal !== oldVal) {
-              if ($scope.tip) {
-                $scope.tip.updateMessages();
-              }
-            }
-          }, false);
-
         });
+
+        if (tip.receivers.length === 1 && tip.msg_receiver_selected === null) {
+          tip.msg_receiver_selected = tip.msg_receivers_selector[0].key;
+        }
+
+        tip.updateMessages();
+
+        $scope.$watch('tip.msg_receiver_selected', function (newVal, oldVal) {
+          if (newVal && newVal !== oldVal) {
+            if ($scope.tip) {
+              $scope.tip.updateMessages();
+            }
+          }
+        }, false);
+
       });
 
     } else if (Authentication.role === 'receiver') {
@@ -73,23 +71,19 @@ GLClient.controller('StatusCtrl',
 
         $scope.tip = tip;
 
-        Contexts.query(function(contexts){
-
-          $scope.tip_unencrypted = false;
-          angular.forEach(tip.receivers, function(receiver){
-            if (receiver.pgp_key_status == 'disabled' && receiver.receiver_id !== tip.receiver_id) {
-              $scope.tip_unencrypted = true;
-            }
-          });
-
-
-          angular.forEach(contexts, function(context, k){
-            if (context.id == $scope.tip.context_id) {
-              $scope.current_context = context;
-            }
-          });
-
+        $scope.tip_unencrypted = false;
+        angular.forEach(tip.receivers, function(receiver){
+          if (receiver.pgp_key_status === 'disabled' && receiver.receiver_id !== tip.receiver_id) {
+            $scope.tip_unencrypted = true;
+          }
         });
+
+        angular.forEach($scope.contexts, function(context, k){
+          if (context.id === $scope.tip.context_id) {
+            $scope.current_context = context;
+          }
+        });
+
       });
     } else {
       if($location.path() === '/status') {
@@ -129,5 +123,5 @@ GLClient.controller('FileDetailsCtrl', ['$scope', function($scope){
     $scope.securityCheckOptions = {
       backdropFade: true,
       dialogFade: true
-    }
+    };
 }]);

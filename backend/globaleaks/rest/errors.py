@@ -8,7 +8,6 @@
 # class variables expected in the Error handler routine
 
 from cyclone.web import HTTPError
-from globaleaks.settings import GLSetting
 
 class GLException(HTTPError):
     reason = "GLTypesError not set"
@@ -82,17 +81,16 @@ class TipReceiptNotFound(GLException):
 # UNUSED ERROR CODE 15 16 17 18 HERE!
 
 
-class ExpectedUniqueField(GLException):
+class DatabaseIntegrityError(GLException):
     """
-    The receiver configuration ID do not exist in the database associated to the Receiver
+    A query on the database resulted in an integrity error
     """
+    reasone = "A query on the database resulted in an integrity error"
     error_code = 19
     status_code = 404 # Not Found
 
-    def __init__(self, key, existent_value):
-        self.reason = "A field expected to be unique is already present (%s:%s)" % (key, existent_value)
-        self.arguments = [key, existent_value]
-
+    def __init__(self, dberror):
+        self.arguments = [dberror]
 
 class ReceiverIdNotFound(GLException):
     """
@@ -235,10 +233,10 @@ class FileTooBig(GLException):
     error_code = 39
     status_code = 400 # Bad Request
 
-    def __init__(self):
+    def __init__(self, size_limit):
         self.reason = ("Provided file upload overcomes size limits (%d Mb)" %
-                      GLSetting.memory_copy.maximum_filesize)
-        self.arguments = [GLSetting.memory_copy.maximum_filesize]
+                       size_limit)
+        self.arguments = [size_limit]
 
 
 class PGPKeyInvalid(GLException):
@@ -309,8 +307,12 @@ class DirectoryTraversalError(GLException):
     status_code = 403
 
 
-# UNUSED ERROR CODE 52 HERE!
+class SubmissionDisabled(GLException):
+    reason = "Submissions are not possible right now"
+    error_code = 52
+    status_code = 503 # Service not available
 
+# UNUSED ERROR CODE 53, 54 HERE!
 
 class FloodException(GLException):
     error_code = 55
@@ -321,6 +323,7 @@ class FloodException(GLException):
         self.arguments = [seconds]
 
 
+# Remind: the FloodException are not used at the moment
 class SubmissionFlood(FloodException):
     error_code = 56
     status_code = 403

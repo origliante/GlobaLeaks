@@ -124,7 +124,7 @@ class TestAuthentication(helpers.TestHandlerWithPopulatedDB):
         yield self.perform_full_submission_actions()
         handler = self.request({
             'username': '',
-            'password': self.dummyWBTip,
+            'password': self.dummySubmission['receipt'],
             'role': 'wb'
         })
         yield handler.post()
@@ -136,7 +136,7 @@ class TestAuthentication(helpers.TestHandlerWithPopulatedDB):
         yield self.perform_full_submission_actions()
         handler = self.request({
             'username': '',
-            'password': self.dummyWBTip,
+            'password': self.dummySubmission['receipt'],
             'role': 'wb'
         })
         GLSetting.memory_copy.tor2web_submission = True
@@ -148,7 +148,7 @@ class TestAuthentication(helpers.TestHandlerWithPopulatedDB):
         yield self.perform_full_submission_actions()
         handler = self.request({
             'username': '',
-            'password': self.dummyWBTip,
+            'password': self.dummySubmission['receipt'],
             'role': 'wb'
         }, headers={'X-Tor2Web': 'whatever'})
         GLSetting.memory_copy.tor2web_submission = False
@@ -216,7 +216,7 @@ class TestAuthentication(helpers.TestHandlerWithPopulatedDB):
         yield self.perform_full_submission_actions()
         handler = self.request({
             'username': '',
-            'password': self.dummyWBTip,
+            'password': self.dummySubmission['receipt'],
             'role': 'wb'
         })
         yield handler.post()
@@ -239,6 +239,7 @@ class TestAuthentication(helpers.TestHandlerWithPopulatedDB):
         self.assertTrue(handler.current_user is None)
         self.assertEqual(len(GLSetting.sessions.keys()), 0)
 
+    @inlineCallbacks
     def test_invalid_admin_login_wrong_password(self):
         handler = self.request({
             'username': 'admin',
@@ -246,8 +247,9 @@ class TestAuthentication(helpers.TestHandlerWithPopulatedDB):
             'role': 'admin'
         })
 
-        self.assertFailure(handler.post(), errors.InvalidAuthentication)
+        yield self.assertFailure(handler.post(), errors.InvalidAuthentication)
 
+    @inlineCallbacks
     def test_invalid_receiver_login_wrong_password(self):
         handler = self.request({
             'username': 'scemo',
@@ -255,8 +257,9 @@ class TestAuthentication(helpers.TestHandlerWithPopulatedDB):
             'role': 'receiver'
         })
 
-        self.assertFailure(handler.post(), errors.InvalidAuthentication)
+        yield self.assertFailure(handler.post(), errors.InvalidAuthentication)
 
+    @inlineCallbacks
     def test_invalid_whistleblower_login_wrong_receipt(self):
         handler = self.request({
             'username': '',
@@ -264,7 +267,7 @@ class TestAuthentication(helpers.TestHandlerWithPopulatedDB):
             'role': 'wb'
         })
 
-        self.assertFailure(handler.post(), errors.InvalidAuthentication)
+        yield self.assertFailure(handler.post(), errors.InvalidAuthentication)
 
     def test_invalid_input_format_missing_role(self):
         handler = self.request({
@@ -293,7 +296,7 @@ class TestAuthentication(helpers.TestHandlerWithPopulatedDB):
 
         failed_login = 5
         for i in xrange(0, failed_login):
-            self.assertFailure(handler.post(), errors.InvalidAuthentication)
+            yield self.assertFailure(handler.post(), errors.InvalidAuthentication)
 
         receiver_status = yield admin.get_receiver(self.dummyReceiver_1['id'], 'en')
         self.assertEqual(GLSetting.failed_login_attempts, failed_login)
