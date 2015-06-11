@@ -146,8 +146,11 @@
           error.setAttribute("style", "block");
         }
       }
-
       <!-- start_globaleaks(); -->
+
+      if (!isBrowserSupported()) {
+        window.location.assign("/browserupdate/index.html");
+      }
     </script>
 
   </body>
